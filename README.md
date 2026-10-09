@@ -1,3 +1,3 @@
 # ADY291c-AI2107-Group2
 #Hello
-#my name is Tráng
+#my name is Trung
