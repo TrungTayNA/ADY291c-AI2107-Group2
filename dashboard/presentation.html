@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thuyết trình Dự án Data Science — Olist E-Commerce (Brazil 2016–2018)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-alt: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #6366f1;
+      --success: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --border: rgba(148, 163, 184, 0.18);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at top right, #1e1b4b, #0f172a 60%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    /* Top Navigation */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 2rem;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 1.05rem;
+      letter-spacing: 0.2px;
+    }
+    .brand span.tag {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    button, select {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.48rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    button:hover, select:hover {
+      border-color: var(--accent);
+      background: var(--card-alt);
+    }
+    button.primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      border-color: transparent;
+    }
+    button.primary:hover {
+      filter: brightness(1.12);
+    }
+    .progress-bar {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      width: 100%;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      width: 12.5%;
+      transition: width 0.3s ease;
+    }
+    /* Slide container */
+    main {
+      flex: 1;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 2.5rem;
+    }
+    .slide {
+      display: none;
+      animation: fadeIn 0.28s ease;
+    }
+    .slide.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .slide-header {
+      margin-bottom: 1.25rem;
+    }
+    .slide-step {
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.3rem;
+    }
+    .slide-title {
+      font-size: 1.85rem;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+    .slide-subtitle {
+      color: var(--muted);
+      font-size: 0.98rem;
+      margin-top: 0.3rem;
+    }
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.9rem;
+      margin-bottom: 1.3rem;
+    }
+    .kpi {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--accent);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+    }
+    .kpi-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .kpi-val {
+      font-size: 1.45rem;
+      font-weight: 800;
+      margin: 0.25rem 0 0.15rem;
+      color: #fff;
+    }
+    .kpi-sub {
+      font-size: 0.78rem;
+      color: var(--success);
+    }
+    /* Content Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 1.25rem;
+      align-items: start;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.1rem;
+    }
+    .card {
+      background: rgba(30, 41, 59, 0.78);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1.4rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+    .card h3 {
+      font-size: 1.12rem;
+      margin-bottom: 0.8rem;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card ul, .card ol {
+      padding-left: 1.25rem;
+      line-height: 1.65;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }
+    .card li { margin-bottom: 0.45rem; }
+    .card b { color: #fff; }
+    code {
+      background: rgba(15, 23, 42, 0.7);
+      color: #38bdf8;
+      padding: 0.12rem 0.4rem;
+      border-radius: 5px;
+      font-size: 0.86rem;
+    }
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+      margin-top: 0.3rem;
+    }
+    th, td {
+      padding: 0.55rem 0.7rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--accent);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    /* Chart box */
+    .chart-box {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 0.65rem;
+      text-align: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    }
+    .chart-box img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      cursor: zoom-in;
+    }
+    .chart-caption {
+      color: #334155;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-top: 0.35rem;
+    }
+    /* Speaker Notes */
+    .speaker-note {
+      margin-top: 1.2rem;
+      background: rgba(245, 158, 11, 0.12);
+      border-left: 4px solid var(--warn);
+      border-radius: 10px;
+      padding: 0.9rem 1.2rem;
+      font-size: 0.94rem;
+      color: #fde68a;
+      line-height: 1.55;
+    }
+    .speaker-note.hidden {
+      display: none;
+    }
+    /* Lightbox modal for zooming images */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    #lightbox img {
+      max-width: 95vw;
+      max-height: 92vh;
+      border-radius: 10px;
+      background: #fff;
+      padding: 0.5rem;
+    }
+    footer {
+      text-align: center;
+      padding: 0.8rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    @media (max-width: 1024px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="tag">ADY201m · Group 2</span>
+      <span>🇧🇷 Olist E-Commerce Data Science Presentation</span>
+    </div>
+    <div class="nav-controls">
+      <button onclick="prevSlide()" id="btnPrev">⬅ Trước</button>
+      <select id="slideSelect" onchange="goToSlide(this.value)">
+        <option value="0">1. Tổng quan Dự án & KPI</option>
+        <option value="1">2. Giai đoạn 1: Khám phá Dữ liệu (EDA)</option>
+        <option value="2">3. Giai đoạn 2: Tiền xử lý & Làm sạch</option>
+        <option value="3">4. Tăng trưởng Doanh thu & Thời điểm Mua</option>
+        <option value="4">5. Danh mục Pareto 80/20 & Thanh toán</option>
+        <option value="5">6. Địa lý & Hiệu quả Logistics</option>
+        <option value="6">7. Kiểm định Thống kê: Giao trễ & Review</option>
+        <option value="7">8. Khách hàng Quay lại & Đề xuất Chiến lược</option>
+      </select>
+      <button class="primary" onclick="nextSlide()" id="btnNext">Tiếp ➡</button>
+      <button onclick="toggleNotes()" id="btnNotes">🎙️ Ẩn/Hiện Lời dẫn (N)</button>
+      <button onclick="toggleFullScreen()">⛶ Toàn màn hình (F)</button>
+    </div>
+  </header>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+  <main>
+    <!-- ==================== SLIDE 1 ==================== -->
+    <section class="slide active">
+      <div class="slide-header">
+        <div class="slide-step">Slide 1 / 8 · Executive Overview</div>
+        <h1 class="slide-title">Phân Tích Dữ Liệu Thương Mại Điện Tử Olist (Brazil, 2016–2018)</h1>
+        <p class="slide-subtitle">Quy trình Khoa học Dữ liệu đầu–cuối: Khám phá (EDA) &rarr; Làm sạch (Preprocessing) &rarr; Kiểm định Thống kê (Analysis) &rarr; Trực quan hoá (Visualization)</p>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Đơn hàng hợp lệ</div>
+          <div class="kpi-val">96,469</div>
+          <div class="kpi-sub">110,186 dòng sản phẩm</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Khách hàng duy nhất</div>
+          <div class="kpi-val">93,349</div>
+          <div class="kpi-sub">2,970 người bán (sellers)</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Doanh thu hàng hoá</div>
+          <div class="kpi-val">13.22M BRL</div>
+          <div class="kpi-sub">Tổng TT: 15.42M BRL</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Giá trị đơn TB (AOV)</div>
+          <div class="kpi-val">159.86 BRL</div>
+          <div class="kpi-sub">Phí ship TB: 22.79 BRL</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Điểm Review TB</div>
+          <div class="kpi-val">4.16 ★</div>
+          <div class="kpi-sub">Giao trung vị: 10.22 ngày</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Tỷ lệ giao trễ</div>
+          <div class="kpi-val">6.77%</div>
+          <div class="kpi-sub">Đúng hạn: 93.23%</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <h3>📘 01. Data Understanding (EDA)</h3>
+          <ul>
+            <li>Khảo sát <b>9 bảng gốc</b> trong <code>data/raw/</code> với hơn <b>1.55 triệu dòng</b>.</li>
+            <li>Đánh giá tỷ lệ khuyết thiếu, trùng lặp, kiểu dữ liệu ngày tháng &amp; mã bưu chính.</li>
+            <li>Kiểm tra toàn vẹn khoá ngoại và phân phối ngoại lai của giá bán (<code>price</code>).</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>🧹 02. Data Preprocessing</h3>
+          <ul>
+            <li>Làm sạch 9 bảng, <b>gắn cờ ngoại lai giá</b> thay vì cắt giá để bảo toàn doanh thu.</li>
+            <li>Rút gọn bảng <code>geolocation</code> từ 1,000,163 dòng xuống <b>19,011 mã zip</b> duy nhất.</li>
+            <li>Đồng bộ khoá ngoại, tạo đặc trưng mới và xuất <code>olist_master.csv</code> (110,186 &times; 49).</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>📊 03 &amp; 04. Analysis &amp; Visualization</h3>
+          <ul>
+            <li>Gộp về mức đơn hàng (96,469 đơn) để không đếm lặp thanh toán và điểm đánh giá.</li>
+            <li>Thực hiện <b>3 kiểm định giả thuyết thống kê</b> (Mann-Whitney U, Chi-square, Spearman).</li>
+            <li>Thiết kế <b>9 biểu đồ</b> trực quan hoá toàn diện và đề xuất 5 giải pháp chiến lược.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="speaker-note">
+        🎙️ <b>Lời dẫn thuyết trình:</b> Xin chào thầy/cô và các bạn. Hôm nay nhóm xin trình bày dự án Khoa học Dữ liệu phân tích sàn thương mại điện tử Olist tại Brazil giai đoạn 2016–2018. Toàn bộ bài làm được tổ chức xuyên suốt qua 4 giai đoạn: từ khám phá 9 bảng dữ liệu thô, xây dựng pipeline làm sạch tự động 14 bước kiểm định, đến phân tích thống kê và trực quan hoá trên 96,469 đơn hàng thành công với tổng giá trị thanh toán hơn 15.4 triệu BRL.
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 2 ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-step">Slide 2 / 8 · Notebook 01</div>
+        <h1 class="slide-title">Giai Đoạn 1: Tìm Hiểu &amp; Khám Phá Dữ Liệu (EDA)</h1>
+        <p class="slide-subtitle">Kiểm toán chất lượng 9 bảng dữ liệu gốc trong <code>data/raw/</code> trước khi làm sạch</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>🔍 Các phát hiện chất lượng dữ liệu quan trọng</h3>
+          <ul>
+            <li><b>Trạng thái đơn hàng:</b> <b>97.02%</b> đơn là <code>delivered</code>; tuy nhiên có <b>8 đơn delivered thiếu ngày giao</b> và 2.98% đơn ở trạng thái huỷ / đang xử lý.</li>
+            <li><b>Bản ghi mồ côi (Orphan Records):</b> Có <b>775 đơn hàng</b> không có dòng sản phẩm nào trong <code>items</code> và <b>1 đơn</b> không có lịch sử thanh toán.</li>
+            <li><b>Ngoại lai giá (Price Outliers):</b> Ngưỡng IQR trên của <code>price</code> là <b>277.40 BRL</b> với <b>8,427 sản phẩm (7.48%)</b> vượt ngưỡng. Đây là hàng điện tử/gia dụng đắt tiền thật, <b>không phải lỗi</b>.</li>
+            <li><b>Đánh giá (Reviews):</b> Có <b>547 đơn</b> có nhiều hơn 1 review; 88.34% thiếu tiêu đề và 58.70% thiếu nội dung bình luận.</li>
+            <li><b>Sản phẩm &amp; Danh mục:</b> Tên cột sai chính tả (<code>lenght</code>); <b>610 sản phẩm (1.85%)</b> thiếu danh mục; <b>2 danh mục</b> chưa có bản dịch tiếng Anh (<code>pc_gamer</code>, <code>portateis_cozinha...</code>).</li>
+            <li><b>Địa lý (Geolocation):</b> <b>26.18%</b> dòng trùng lặp hoàn toàn, trung bình <b>52.6 dòng/zip</b>, và <b>42 toạ độ</b> nằm ngoài lãnh thổ Brazil.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>📋 Tổng hợp kiểm toán 9 bảng dữ liệu gốc</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Bảng</th>
+                <th>Số dòng</th>
+                <th>Trùng lặp</th>
+                <th>Vấn đề chính phát hiện</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>orders</code></td><td>99,441</td><td>0</td><td>Cột thời gian dạng <code>object</code>; 8 đơn delivered thiếu ngày giao</td></tr>
+              <tr><td><code>items</code></td><td>112,650</td><td>0</td><td>7.48% SP giá &gt; 277.40 BRL (ngoại lai thật)</td></tr>
+              <tr><td><code>payments</code></td><td>103,886</td><td>0</td><td>3 dòng <code>not_defined</code>, 9 dòng = 0 BRL, 2 dòng trả góp 0 kỳ</td></tr>
+              <tr><td><code>reviews</code></td><td>99,224</td><td>0</td><td>814 <code>review_id</code> trùng; 547 đơn có &gt;1 đánh giá</td></tr>
+              <tr><td><code>products</code></td><td>32,951</td><td>0</td><td>610 SP thiếu danh mục; 4 SP có <code>weight_g = 0</code></td></tr>
+              <tr><td><code>customers</code></td><td>99,441</td><td>0</td><td>Mất số 0 ở đầu mã zip nếu đọc kiểu số nguyên</td></tr>
+              <tr><td><code>sellers</code></td><td>3,095</td><td>0</td><td>Tên thành phố chưa đồng nhất chữ hoa/thường</td></tr>
+              <tr><td><code>geo</code></td><td>1,000,163</td><td>261,831</td><td>~52.6 dòng/zip; 42 toạ độ ngoài phạm vi Brazil</td></tr>
+              <tr><td><code>category</code></td><td>71</td><td>0</td><td>Thiếu 2 danh mục có trong bảng <code>products</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="speaker-note">
+        🎙️ <b>Lời dẫn thuyết trình:</b> Trong Notebook 01, thay vì làm sạch cảm tính, nhóm kiểm tra định lượng toàn bộ 9 bảng. Nhóm phát hiện 775 đơn hàng không có sản phẩm, 547 đơn bị lặp review, 2 danh mục thiếu bản dịch tiếng Anh và đặc biệt là bảng Geolocation có hơn 1 triệu dòng với trung bình 52.6 toạ độ cho mỗi mã zip. Những con số này là căn cứ trực tiếp cho thiết kế pipeline ở Notebook 02.
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 3 ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-step">Slide 3 / 8 · Notebook 02</div>
+        <h1 class="slide-title">Giai Đoạn 2: Tiền Xử Lý, Đồng Bộ Khoá &amp; Tạo Đặc Trưng</h1>
+        <p class="slide-subtitle">Xây dựng pipeline chuẩn hoá 9 bảng sạch và bảng tổng hợp <code>olist_master.csv</code> (110,186 dòng &times; 49 cột)</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>⚙️ Quyết định kỹ thuật &amp; Feature Engineering</h3>
+          <ul>
+            <li><b>1. Không cắt giá bằng IQR (Gắn cờ <code>is_price_outlier</code>):</b> Cắt giá (capping) ở 277.40 BRL sẽ làm mất hàng triệu BRL doanh thu thực. Nhóm giữ nguyên <code>price</code> và gắn cờ <code>is_price_outlier</code> cho 8,427 dòng.</li>
+            <li><b>2. Đồng bộ khoá toàn cục (Referential Integrity):</b> Chỉ giữ đơn <code>delivered</code> có đủ <code>items</code>, <code>payments</code>, <code>customers</code>, sau đó lọc đồng bộ các bảng con để triệt tiêu 100% bản ghi mồ côi.</li>
+            <li><b>3. Chuẩn hoá Geolocation:</b> Đọc zip code dạng chuỗi 5 ký tự (<code>zfill(5)</code>), lọc khung toạ độ Brazil và gom 1 toạ độ trung bình/zip (giảm 98.1% dung lượng).</li>
+            <li><b>4. Đặc trưng mới (Feature Engineering):</b>
+              <ul>
+                <li><code>delivery_days</code>, <code>estimated_days</code>: Thời gian giao thực tế &amp; dự kiến.</li>
+                <li><code>delay_days</code>, <code>is_late</code>: Số ngày trễ hạn (&gt;0 là giao trễ).</li>
+                <li><code>product_volume_cm3</code>: Thể tích kiện hàng (dài &times; rộng &times; cao).</li>
+                <li><code>same_state</code>: Cờ nhận diện người bán và khách hàng cùng bang.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>✅ Đối chiếu Trước &amp; Sau Làm Sạch (14/14 Kiểm định ĐẠT)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Bảng dữ liệu</th>
+                <th>Trước (Raw)</th>
+                <th>Sau (Clean)</th>
+                <th>Giữ lại (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>clean_olist_orders</code></td><td>99,441</td><td>96,469</td><td>97.01%</td></tr>
+              <tr><td><code>clean_olist_order_items</code></td><td>112,650</td><td>110,186</td><td>97.81%</td></tr>
+              <tr><td><code>clean_olist_order_payments</code></td><td>103,886</td><td>100,739</td><td>96.97%</td></tr>
+              <tr><td><code>clean_olist_order_reviews</code></td><td>99,224</td><td>95,823</td><td>96.57%</td></tr>
+              <tr><td><code>clean_olist_products</code></td><td>32,951</td><td>32,214</td><td>97.76%</td></tr>
+              <tr><td><code>clean_olist_customers</code></td><td>99,441</td><td>96,469</td><td>97.01%</td></tr>
+              <tr><td><code>clean_olist_sellers</code></td><td>3,095</td><td>2,970</td><td>95.96%</td></tr>
+              <tr><td><code>clean_olist_geolocation</code></td><td>1,000,163</td><td>19,011</td><td>1.90% (1 dòng/zip)</td></tr>
+              <tr><td><code>clean_category_translation</code></td><td>71</td><td>74</td><td>104.23% (+3 mục)</td></tr>
+              <tr><td><b><code>olist_master.csv</code></b></td><td>—</td><td><b>110,186 &times; 49</b></td><td><b>100% khớp items</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="speaker-note">
+        🎙️ <b>Lời dẫn thuyết trình:</b> Điểm khác biệt lớn trong Notebook 02 của nhóm là bước kiểm định tự động gồm 14 điều kiện <code>assert</code>: đảm bảo khoá chính duy nhất, mọi khoá ngoại đều tồn tại trong bảng cha, không còn ô trống ở bảng sản phẩm và mọi danh mục đều có bản dịch tiếng Anh. Đầu ra cuối cùng gồm 9 bảng sạch và bảng tổng hợp <code>olist_master.csv</code> sẵn sàng cho phân tích.
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 4 ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-step">Slide 4 / 8 · Notebook 03 &amp; 04</div>
+        <h1 class="slide-title">Xu Hướng Tăng Trưởng Doanh Thu &amp; Thời Điểm Mua Sắm</h1>
+        <p class="slide-subtitle">Phân tích chuỗi thời gian theo tháng (2017–2018) và ma trận nhiệt Thứ &times; Giờ đặt hàng</p>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="chart-box">
+            <img src="../reports/figures/01_monthly_revenue.png" alt="Monthly Revenue" onclick="openLightbox(this.src)" />
+            <div class="chart-caption">Hình 1: Doanh thu (nghìn BRL) và Số đơn hàng theo tháng (01/2017 – 08/2018)</div>
+          </div>
+          <div class="card" style="margin-top: 0.9rem;">
+            <h3>📈 Phát hiện về Tăng trưởng</h3>
+            <ul>
+              <li>Doanh thu cùng kỳ <b>tháng 1–8/2018 đạt 7,217,172 BRL</b>, tăng <b>+141.1%</b> so với 8 tháng đầu năm 2017 (<b>2,993,277 BRL</b>).</li>
+              <li>Đỉnh doanh thu toàn giai đoạn rơi vào <b>tháng 11/2017 (Black Friday)</b> với <b>987,648 BRL</b> và <b>7,288 đơn hàng</b>.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div>
+          <div class="chart-box">
+            <img src="../reports/figures/02_weekday_hour_heatmap.png" alt="Weekday Hour Heatmap" onclick="openLightbox(this.src)" />
+            <div class="chart-caption">Hình 2: Ma trận nhiệt số lượng đơn hàng theo Thứ trong tuần và Giờ trong ngày</div>
+          </div>
+          <div class="card" style="margin-top: 0.9rem;">
+            <h3>⏰ Phát hiện về Hành vi Thời gian</h3>
+            <ul>
+              <li>Khách mua nhiều nhất vào <b>Thứ Hai (15,701 đơn)</b> và <b>Thứ Ba (15,502 đơn)</b>; thấp nhất vào <b>Thứ Bảy (10,555 đơn)</b>.</li>
+              <li>Giờ cao điểm nhất là <b>16h chiều</b>; khung giờ từ <b>10h–21h chiếm 75.6%</b> tổng số đơn, trong khi 0h–6h sáng chỉ chiếm <b>5.3%</b>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="speaker-note">
+        🎙️ <b>Lời dẫn thuyết trình:</b> Bước sang Giai đoạn 3 và 4, nhóm gộp dữ liệu về mức đơn hàng (96,469 đơn) để phân tích. Biểu đồ trái cho thấy quy mô sàn tăng gấp 2.4 lần trong năm 2018 và tạo đỉnh đột biến vào dịp Black Friday tháng 11/2017. Biểu đồ phải cho thấy khách hàng Brazil mua sắm mạnh nhất vào giờ làm việc buổi chiều và buổi tối từ Thứ Hai đến Thứ Năm.
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 5 ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-step">Slide 5 / 8 · Notebook 03 &amp; 04</div>
+        <h1 class="slide-title">Phân Tích Pareto Danh Mục Sản Phẩm &amp; Hành Vi Thanh Toán</h1>
+        <p class="slide-subtitle">Quy luật 80/20 trên 74 ngành hàng và đặc trưng mua trả góp qua thẻ tín dụng tại Brazil</p>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="chart-box">
+            <img src="../reports/figures/03_category_pareto.png" alt="Category Pareto" onclick="openLightbox(this.src)" />
+            <div class="chart-caption">Hình 3: Top 20 danh mục doanh thu cao nhất và đường cong Pareto luỹ kế</div>
+          </div>
+          <div class="card" style="margin-top: 0.9rem;">
+            <h3>🏆 Quy luật Pareto (80/20)</h3>
+            <ul>
+              <li>Chỉ <b>18 / 74 danh mục (24%)</b> tạo ra <b>80% tổng doanh thu</b> hàng hoá toàn sàn.</li>
+              <li>Top 5 ngành hàng chủ lực: <code>health_beauty</code> (<b>9.33%</b>), <code>watches_gifts</code> (<b>8.82%</b>), <code>bed_bath_table</code> (<b>7.74%</b>), <code>sports_leisure</code> (<b>7.22%</b>), <code>computers_accessories</code> (<b>6.72%</b>).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div>
+          <div class="chart-box">
+            <img src="../reports/figures/08_payment.png" alt="Payment Behavior" onclick="openLightbox(this.src)" />
+            <div class="chart-caption">Hình 4: Tỷ trọng phương thức thanh toán và phân bố số kỳ trả góp thẻ tín dụng</div>
+          </div>
+          <div class="card" style="margin-top: 0.9rem;">
+            <h3>💳 Đòn bẩy Thanh toán Trả góp</h3>
+            <ul>
+              <li><b>Thẻ tín dụng (Credit Card)</b> chiếm <b>75.48%</b> tổng số đơn; phiếu thanh toán tiền mặt <b>Boleto</b> chiếm <b>19.89%</b>; Voucher 3.09% và Thẻ ghi nợ 1.54%.</li>
+              <li>Trong nhóm thẻ tín dụng, <b>67.9% đơn hàng chọn trả góp &gt;1 kỳ</b>. Đơn trả góp trên 10 kỳ có giá trị trung bình <b>377.45 BRL</b> (cao gấp 3.4 lần đơn trả 1 kỳ: <b>110.27 BRL</b>).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="speaker-note">
+        🎙️ <b>Lời dẫn thuyết trình:</b> Ở góc độ danh mục, 18 trên 74 ngành hàng mang về 80% doanh thu, dẫn đầu là Sức khoẻ &amp; Làm đẹp và Đồng hồ &amp; Quà tặng. Ở góc độ thanh toán, trả góp qua thẻ tín dụng là động lực chính thúc đẩy người dùng mua các đơn hàng giá trị lớn.
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 6 ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-step">Slide 6 / 8 · Notebook 03 &amp; 04</div>
+        <h1 class="slide-title">Phân Bố Địa Lý &amp; Hiệu Quả Mạng Lưới Giao Vận</h1>
+        <p class="slide-subtitle">Sự tập trung đơn hàng tại vùng Đông Nam và chênh lệch thời gian vận chuyển giữa các vùng miền</p>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="chart-box">
+            <img src="../reports/figures/04_state_orders_delivery.png" alt="State Orders and Delivery" onclick="openLightbox(this.src)" />
+            <div class="chart-caption">Hình 5: Số lượng đơn hàng và Số ngày giao trung bình theo từng Bang</div>
+          </div>
+          <div class="card" style="margin-top: 0.9rem;">
+            <h3>🚚 So sánh Giao hàng Nội bang vs Liên bang</h3>
+            <ul>
+              <li><b>Top 3 bang (SP, RJ, MG)</b> chiếm tới <b>66.5%</b> tổng số đơn toàn quốc (riêng São Paulo chiếm 42.0%).</li>
+              <li><b>Đơn cùng bang (<code>same_state = True</code>, 35.8% đơn):</b> Giao trung bình <b>7.95 ngày</b>, tỷ lệ trễ <b>4.64%</b>, phí ship <b>15.22 BRL</b>.</li>
+              <li><b>Đơn khác bang (<code>same_state = False</code>, 64.2% đơn):</b> Giao trung bình <b>15.13 ngày</b>, tỷ lệ trễ <b>7.96%</b>, phí ship <b>26.99 BRL</b>.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div>
+          <div class="chart-box">
+            <img src="../reports/figures/05_delivery_map.png" alt="Delivery Map" style="max-height: 430px;" onclick="openLightbox(this.src)" />
+            <div class="chart-caption">Hình 6: Bản đồ thời gian giao hàng theo toạ độ Zip Code của khách hàng (định vị 99.7% đơn)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="speaker-note">
+        🎙️ <b>Lời dẫn thuyết trình:</b> Ghép nối bảng đơn hàng với 19,011 toạ độ zip code sạch, nhóm định vị được 99.7% đơn hàng trên bản đồ Brazil. Có thể thấy vùng Đông Nam và miền Nam (SP, PR, MG) có màu xanh lá với thời gian giao chỉ 8–12 ngày, trong khi miền Bắc và Đông Bắc (RR, AP, AM, AL) có màu đỏ cam với thời gian giao lên tới 25–29 ngày.
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 7 ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-step">Slide 7 / 8 · Hypothesis Testing (Notebook 03 &amp; 04)</div>
+        <h1 class="slide-title">Kiểm Định Thống Kê: Giao Hàng Trễ &amp; Sự Hài Lòng Của Khách Hàng</h1>
+        <p class="slide-subtitle">Chứng minh định lượng tác động của việc giao trễ đến điểm đánh giá (Review Score)</p>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="chart-box">
+            <img src="../reports/figures/06_late_vs_review.png" alt="Late vs Review" onclick="openLightbox(this.src)" />
+            <div class="chart-caption">Hình 7: Phân bố số sao (Đúng hạn vs Trễ) và Điểm TB theo mức độ trễ</div>
+          </div>
+          <div class="chart-box" style="margin-top: 0.9rem;">
+            <img src="../reports/figures/07_delivery_days_hist.png" alt="Delivery Days Histogram" onclick="openLightbox(this.src)" />
+            <div class="chart-caption">Hình 8: Phân phối số ngày giao hàng thực tế (trung vị 10.2 ngày) so với dự kiến (23.2 ngày)</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🧪 Kết quả 3 Kiểm định Giả thuyết (&alpha; = 0.05)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nhóm đơn hàng</th>
+                <th>Số đơn</th>
+                <th>Điểm Review TB</th>
+                <th>Tỷ lệ &le; 2 Sao</th>
+                <th>Tỷ lệ 5 Sao</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><b>Đúng / Sớm hạn</b></td><td>89,443</td><td><b>4.29 ★</b></td><td>9.22%</td><td>61.97%</td></tr>
+              <tr><td><b>Giao trễ (&gt;0 ngày)</b></td><td>6,380</td><td><b>2.27 ★</b></td><td><b>60.95%</b></td><td>17.77%</td></tr>
+              <tr><td>&nbsp;&nbsp;• Trễ 1–3 ngày</td><td>1,860</td><td>3.29 ★</td><td>35.22%</td><td>34.89%</td></tr>
+              <tr><td>&nbsp;&nbsp;• Trễ 4–7 ngày</td><td>1,763</td><td>2.11 ★</td><td>65.74%</td><td>13.61%</td></tr>
+              <tr><td>&nbsp;&nbsp;• Trễ &gt; 7 ngày</td><td>2,757</td><td>1.69 ★</td><td>75.23%</td><td>9.90%</td></tr>
+            </tbody>
+          </table>
+
+          <ul style="margin-top: 1rem;">
+            <li><b>1. Kiểm định phi tham số Mann-Whitney U:</b> <i>U</i> = 1.07 &times; 10<sup>8</sup>, <b><i>p</i>-value &lt; 0.0001</b> &rarr; Bác bỏ <i>H</i><sub>0</sub>. Điểm đánh giá của đơn giao trễ thấp hơn đơn đúng hạn một cách có ý nghĩa thống kê.</li>
+            <li><b>2. Kiểm định độc lập Chi-square (&chi;<sup>2</sup>):</b> &chi;<sup>2</sup> = 13,864.5, <b><i>p</i>-value &lt; 0.0001</b> &rarr; Bác bỏ <i>H</i><sub>0</sub>. Giao trễ làm tăng nguy cơ nhận đánh giá tiêu cực (1–2 sao) gấp <b>6.6 lần</b> (60.95% so với 9.22%).</li>
+            <li><b>3. Tương quan hạng Spearman:</b> &rho; = &minus;0.235, <b><i>p</i>-value &lt; 0.0001</b> &rarr; Số ngày giao càng kéo dài, điểm đánh giá của khách hàng càng giảm.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="speaker-note">
+        🎙️ <b>Lời dẫn thuyết trình:</b> Để chứng minh giả thuyết "giao hàng trễ làm sụt giảm điểm đánh giá", nhóm sử dụng 3 kiểm định thống kê phi tham số (do điểm review từ 1–5 sao không tuân theo phân phối chuẩn). Cả 3 kiểm định đều cho p-value &lt; 0.0001. Thực tế, chỉ cần trễ từ 4–7 ngày, tỷ lệ khách đánh giá 1–2 sao đã vọt lên 65.7%.
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 8 ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-step">Slide 8 / 8 · Synthesis &amp; Strategic Recommendations</div>
+        <h1 class="slide-title">Tương Quan Đa Biến, Khách Hàng Quay Lại &amp; Đề Xuất Chiến Lược</h1>
+        <p class="slide-subtitle">Tổng hợp kết quả nghiên cứu từ Notebook 01–04 thành giải pháp thực tiễn cho doanh nghiệp</p>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="chart-box">
+            <img src="../reports/figures/09_correlation.png" alt="Correlation Heatmap" style="max-height: 360px;" onclick="openLightbox(this.src)" />
+            <div class="chart-caption">Hình 9: Ma trận tương quan Spearman giữa các biến mức đơn hàng</div>
+          </div>
+          <div class="card" style="margin-top: 0.9rem;">
+            <h3>🔁 Bài toán Giữ chân Khách hàng (Customer Retention)</h3>
+            <ul>
+              <li>Định danh theo <code>customer_unique_id</code>: Trong <b>93,349 khách hàng</b>, chỉ có <b>2,801 khách (3.00%)</b> quay lại mua lần thứ 2 trở lên.</li>
+              <li>Tuy nhiên, khách mua lại có mức chi tiêu trung bình đạt <b>308.59 BRL</b> — cao gần gấp đôi so với khách mua 1 lần (<b>160.76 BRL</b>).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🚀 5 Đề xuất Chiến lược Trọng tâm cho Olist</h3>
+          <ol>
+            <li><b>Kiểm soát Giao trễ &amp; Dự báo SLA thông minh:</b>
+              Thiết lập cảnh báo tự động cho các đơn có nguy cơ trễ &gt;3 ngày (đặc biệt tuyến giao liên bang đến RJ, BA, AL, MA) và chủ động tặng voucher đền bù trước khi khách chấm 1 sao.</li>
+            <li><b>Ưu tiên Điều phối Người bán Nội bang (Local Seller Prioritization):</b>
+              Đưa biến <code>same_state</code> vào thuật toán xếp hạng tìm kiếm sản phẩm để nâng tỷ lệ giao nội bang (từ 35.8%), giúp giảm 50% thời gian chờ (7.95 ngày vs 15.13 ngày) và tiết kiệm 44% phí vận chuyển.</li>
+            <li><b>Phát triển Kho vệ tinh &amp; Mở rộng Seller ngoài vùng Đông Nam:</b>
+              Khuyến khích nhà bán hàng mở kho tại vùng Đông Bắc và miền Nam để giải quyết điểm nghẽn giao vận 20–29 ngày.</li>
+            <li><b>Tối ưu Hoạt động Thương mại theo Pareto &amp; Khung giờ Vàng:</b>
+              Đẩy ngân sách Flash Sale vào khung <b>10h–21h (đỉnh 16h)</b> từ Thứ Hai đến Thứ Năm; tập trung tồn kho cho <b>18 ngành hàng Pareto</b> trước kỳ Black Friday tháng 11.</li>
+            <li><b>Chương trình Khách hàng Thân thiết (Loyalty &amp; Retargeting):</b>
+              Kích hoạt chiến dịch ưu đãi mua lại sau 15–30 ngày kể từ đơn đầu tiên được giao đúng hạn (nhóm đạt 4.29★) nhằm nâng tỷ lệ mua lặp lại từ <b>3% lên 6–8%</b>.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="speaker-note">
+        🎙️ <b>Lời dẫn thuyết trình:</b> Kết thúc bài trình bày, nhóm đúc kết 5 khuyến nghị chiến lược dựa trên bằng chứng dữ liệu: (1) giảm tỷ lệ giao trễ liên bang để bảo vệ uy tín điểm sao, (2) ưu tiên kết nối người bán cùng bang, (3) mở rộng mạng lưới kho ngoài Đông Nam, (4) tập trung vào 18 danh mục Pareto kết hợp trả góp thẻ tín dụng, và (5) khai thác mỏ vàng từ nhóm khách hàng quay lại. Cảm ơn thầy/cô và các bạn đã lắng nghe!
+      </div>
+    </section>
+  </main>
+
+  <div id="lightbox" onclick="this.style.display='none'">
+    <img id="lightboxImg" src="" alt="Zoomed chart" />
+  </div>
+
+  <footer>
+    Sử dụng phím mũi tên <b>&larr; / &rarr;</b> hoặc <b>Space</b> để chuyển slide · Nhấn <b>N</b> để ẩn/hiện lời dẫn · Nhấn vào biểu đồ bất kỳ để phóng to
+  </footer>
+
+  <script>
+    let current = 0;
+    const slides = document.querySelectorAll('.slide');
+    const select = document.getElementById('slideSelect');
+    const fill = document.getElementById('progressFill');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    let notesVisible = true;
+
+    function updateSlide() {
+      slides.forEach((s, i) => s.classList.toggle('active', i === current));
+      select.value = current;
+      fill.style.width = ((current + 1) / slides.length * 100) + '%';
+      btnPrev.disabled = current === 0;
+      btnNext.disabled = current === slides.length - 1;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function nextSlide() {
+      if (current < slides.length - 1) { current++; updateSlide(); }
+    }
+
+    function prevSlide() {
+      if (current > 0) { current--; updateSlide(); }
+    }
+
+    function goToSlide(idx) {
+      current = parseInt(idx, 10);
+      updateSlide();
+    }
+
+    function toggleNotes() {
+      notesVisible = !notesVisible;
+      document.querySelectorAll('.speaker-note').forEach(el => {
+        el.classList.toggle('hidden', !notesVisible);
+      });
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    function openLightbox(src) {
+      const lb = document.getElementById('lightbox');
+      document.getElementById('lightboxImg').src = src;
+      lb.style.display = 'flex';
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'SELECT') return;
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+      else if (e.key.toLowerCase() === 'n') { toggleNotes(); }
+      else if (e.key.toLowerCase() === 'f') { toggleFullScreen(); }
+      else if (e.key === 'Escape') { document.getElementById('lightbox').style.display = 'none'; }
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>
