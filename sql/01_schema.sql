@@ -290,20 +290,15 @@ CREATE INDEX IF NOT EXISTS idx_sellers_state ON sellers(seller_state);
 
 -- View 1: Doanh thu theo tháng
 CREATE VIEW IF NOT EXISTS v_sales_monthly AS
-WITH order_payment_totals AS (
-    SELECT order_id, SUM(payment_value) AS order_revenue
-    FROM order_payments
-    GROUP BY order_id
-)
 SELECT
     o.purchase_year_month,
     o.purchase_year,
     o.purchase_month,
-    COUNT(*)                       AS total_orders,
-    ROUND(SUM(p.order_revenue), 2) AS total_revenue,
-    ROUND(AVG(p.order_revenue), 2) AS avg_order_value
+    COUNT(DISTINCT o.order_id)     AS total_orders,
+    ROUND(SUM(p.payment_value), 2) AS total_revenue,
+    ROUND(AVG(p.payment_value), 2) AS avg_order_value
 FROM orders o
-JOIN order_payment_totals p ON o.order_id = p.order_id
+JOIN order_payments p ON o.order_id = p.order_id
 GROUP BY o.purchase_year_month, o.purchase_year, o.purchase_month;
 
 -- View 2: KPI giao hàng theo bang khách hàng
@@ -371,3 +366,4 @@ SELECT
     ROUND(AVG(payment_installments), 2)                AS avg_installments
 FROM order_payments
 GROUP BY payment_type;
+
