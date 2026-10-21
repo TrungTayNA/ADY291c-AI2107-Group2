@@ -6,3 +6,4 @@ scikit-learn
 streamlit
 folium
 SQLAlchemy
+tabulate
