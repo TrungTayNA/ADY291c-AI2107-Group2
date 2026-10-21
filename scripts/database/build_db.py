@@ -84,6 +84,8 @@ def step1_load_staging(conn):
 def step2_transform(conn):
     log("\n[STEP 2] Transform Staging -> Relational...")
     sql = read_sql("02_load_data.sql")
+    if not sql.strip():
+        raise RuntimeError("sql/02_load_data.sql is empty; no data was transformed")
 
     # Tach tung statement, BAN THUONG execute (khong dung executescript)
     cur = conn.cursor()
@@ -95,7 +97,7 @@ def step2_transform(conn):
         try:
             cur.execute(stmt)
         except sqlite3.OperationalError as e:
-            log(f"  WARN: {e} | {stmt[:50]}")
+            raise RuntimeError(f"Failed to execute transform SQL: {stmt[:100]}") from e
     conn.commit()
     log("  OK Transform done")
 

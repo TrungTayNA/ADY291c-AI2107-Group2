@@ -41,6 +41,29 @@ def main():
         return
 
     conn = get_connection()
+    required_tables = (
+        "customers",
+        "orders",
+        "order_items",
+        "order_payments",
+        "order_reviews",
+        "products",
+        "sellers",
+    )
+    empty_tables = [
+        table
+        for table in required_tables
+        if conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == 0
+    ]
+    if empty_tables:
+        conn.close()
+        print(
+            "❌ Database chưa có đủ dữ liệu "
+            f"(bảng rỗng: {', '.join(empty_tables)}). "
+            "Hãy chạy `python scripts\\database\\build_db.py` trước."
+        )
+        return
+
     reports = []
 
     print("🚀 BẮT ĐẦU TRUY VẤN DỮ LIỆU KINH DOANH TỪ OLIST.DB...")

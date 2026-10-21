@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 -- ============================================================
 -- SQL DATA WRANGLING & ANALYTICS QUERIES
 -- Target DBMS : SQLite 3.x
@@ -254,4 +252,3 @@ LEFT JOIN order_payments pay ON o.order_id = pay.order_id AND pay.payment_sequen
 WHERE o.delivery_days IS NOT NULL
   AND rv.review_score IS NOT NULL
 LIMIT 10;
->>>>>>> Stashed changes

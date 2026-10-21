@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 -- ============================================================
 -- DATABASE SCHEMA: OLIST E-COMMERCE ANALYSIS
 -- Target DBMS : SQLite 3.x
@@ -373,5 +371,3 @@ SELECT
     ROUND(AVG(payment_installments), 2)                AS avg_installments
 FROM order_payments
 GROUP BY payment_type;
-
->>>>>>> Stashed changes
