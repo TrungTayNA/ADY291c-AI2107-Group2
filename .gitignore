@@ -3,6 +3,7 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 __pycache__/
+.venv/
 .ipynb_checkpoints/
 *.env
 *.db

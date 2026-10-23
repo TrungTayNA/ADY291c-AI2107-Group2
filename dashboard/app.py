@@ -222,7 +222,7 @@ def speaker_box(text: str):
 def show_saved_or_plot(fig_filename: str, caption: str):
     path = os.path.join(FIG_DIR, fig_filename)
     if os.path.exists(path):
-        st.image(path, caption=caption, use_container_width=True)
+        st.image(path, caption=caption, width="stretch")
     else:
         st.warning(f"Không tìm thấy {fig_filename}")
 
@@ -267,7 +267,7 @@ def slide_01_overview():
             ],
             columns=["Bảng", "Số dòng gốc", "Dòng trùng", "Vấn đề phát hiện trong EDA"],
         )
-        st.dataframe(eda_summary, use_container_width=True, hide_index=True)
+        st.dataframe(eda_summary, width="stretch", hide_index=True)
 
     speaker_box(
         "Ở Giai đoạn 1 (Notebook 01), nhóm tiến hành kiểm tra toàn diện 9 bảng dữ liệu gốc với hơn 1,5 triệu bản ghi. "
@@ -319,7 +319,7 @@ def slide_02_preprocessing():
             ],
             columns=["Bảng", "Dòng gốc (Raw)", "Dòng sạch (Clean)", "Giữ lại (%)", "Ghi chú xử lý"],
         )
-        st.dataframe(clean_comp, use_container_width=True, hide_index=True)
+        st.dataframe(clean_comp, width="stretch", hide_index=True)
         st.success("✅ Tất cả 14/14 điều kiện kiểm định chất lượng dữ liệu (Data Quality Checks) đều ĐẠT 100%.")
 
     speaker_box(
@@ -371,7 +371,7 @@ def slide_04_category_and_payment():
         )
         cat_df["share_%"] = (cat_df["revenue"] / cat_df["revenue"].sum() * 100).round(2)
         cat_df["cum_%"] = cat_df["share_%"].cumsum().round(2)
-        st.dataframe(cat_df.head(8), use_container_width=True, hide_index=True)
+        st.dataframe(cat_df.head(8), width="stretch", hide_index=True)
     with c2:
         show_saved_or_plot("08_payment.png", "Tỷ trọng phương thức thanh toán & Số kỳ trả góp thẻ tín dụng")
         st.markdown(
@@ -454,7 +454,7 @@ def slide_06_statistical_tests():
             .round(2)
             .reset_index()
         )
-        st.dataframe(delay_tbl, use_container_width=True, hide_index=True)
+        st.dataframe(delay_tbl, width="stretch", hide_index=True)
 
     speaker_box(
         "Đây là phát hiện quan trọng nhất của dự án: dù tỷ lệ giao trễ toàn sàn chỉ chiếm 6.77%, nhưng khi đơn hàng bị trễ, điểm review trung bình sụt giảm nghiêm trọng từ 4.29 sao xuống 2.27 sao, "
@@ -519,7 +519,7 @@ if mode.startswith("🎤"):
 
     nav1, nav2, nav3 = st.columns([1, 3, 1])
     with nav1:
-        if st.button("⬅️ Slide trước", use_container_width=True, disabled=st.session_state.slide_idx == 0):
+        if st.button("⬅️ Slide trước", width="stretch", disabled=st.session_state.slide_idx == 0):
             st.session_state.slide_idx -= 1
             st.rerun()
     with nav2:
@@ -533,7 +533,7 @@ if mode.startswith("🎤"):
     with nav3:
         if st.button(
             "Slide tiếp ➡️",
-            use_container_width=True,
+            width="stretch",
             disabled=st.session_state.slide_idx == len(SLIDES) - 1,
         ):
             st.session_state.slide_idx += 1
