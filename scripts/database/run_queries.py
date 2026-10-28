@@ -24,7 +24,7 @@ def get_connection():
     conn.execute("PRAGMA query_only = ON;")
     return conn
 
-def run_query(conn, title, sql):
+def run_query(conn, title, sql, max_rows=50):
     print("\n" + "=" * 70)
     print(f"📊 {title}")
     print("=" * 70)
@@ -32,8 +32,22 @@ def run_query(conn, title, sql):
     df = pd.read_sql_query(sql, conn)
     dt = time.time() - t0
     print(f"⏱️  Thời gian thực thi: {dt:.3f}s | Số dòng kết quả: {len(df)}")
-    print(df.to_string(index=False))
+    print(df.head(max_rows).to_string(index=False))
+    if len(df) > max_rows:
+        print(f"... còn {len(df) - max_rows} dòng, xem bảng đầy đủ trong báo cáo Markdown")
     return df
+
+
+def export_report(reports):
+    os.makedirs(os.path.dirname(REPORT_PATH), exist_ok=True)
+    with open(REPORT_PATH, "w", encoding="utf-8") as f:
+        f.write("# Báo cáo truy vấn SQL - Olist\n\n")
+        for title, df in reports:
+            f.write(f"## {title}\n\n")
+            f.write(f"Số dòng kết quả: {len(df)}\n\n")
+            f.write(df.to_markdown(index=False))
+            f.write("\n\n")
+    print(f"\nĐã xuất báo cáo SQL: {REPORT_PATH}")
 
 def main():
     if not os.path.exists(DB_PATH):
@@ -163,18 +177,149 @@ def main():
     df6 = run_query(conn, "BQ6: SO SÁNH LOGISTICS CÙNG BANG VS KHÁC BANG", q6)
     reports.append(("BQ6: Logistics Cùng Bang vs Khác Bang", df6))
 
+    # BQ7: Phân bố review score
+    q7 = """
+    SELECT
+        review_score,
+        COUNT(*) AS order_count,
+        ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM v_review_order_features), 2) AS percentage
+    FROM v_review_order_features
+    GROUP BY review_score
+    ORDER BY review_score;
+    """
+    df7 = run_query(conn, "BQ7: PHÂN BỐ REVIEW SCORE Ở CẤP ĐƠN HÀNG", q7)
+    reports.append(("BQ7: Phân bố Review Score", df7))
+
+    # BQ8: Đơn trễ và đúng hạn/sớm
+    q8 = """
+    SELECT
+        CASE WHEN is_late = 1 THEN 'Giao trễ'
+             ELSE 'Đúng hạn hoặc sớm'
+        END AS delivery_group,
+        COUNT(*) AS order_count,
+        ROUND(AVG(review_score), 2) AS avg_review_score,
+        ROUND(100.0 * SUM(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END) / COUNT(*), 2) AS low_score_rate_pct
+    FROM v_review_order_features
+    GROUP BY is_late;
+    """
+    df8 = run_query(conn, "BQ8: REVIEW SCORE THEO TRẠNG THÁI ĐÚNG HẠN/HAY TRỄ", q8)
+    reports.append(("BQ8: Review theo Trạng thái Giao hàng", df8))
+
+    # BQ9: Nhóm mức độ trễ theo ngày
+    q9 = """
+    SELECT
+        CASE
+            WHEN delay_days <= 0 THEN 'Sớm hoặc đúng hạn'
+            WHEN delay_days <= 3 THEN 'Trễ 1-3 ngày'
+            WHEN delay_days <= 7 THEN 'Trễ 4-7 ngày'
+            ELSE 'Trễ trên 7 ngày'
+        END AS delay_group,
+        COUNT(*) AS order_count,
+        ROUND(AVG(review_score), 2) AS avg_review_score
+    FROM v_review_order_features
+    WHERE delay_days IS NOT NULL
+    GROUP BY delay_group
+    ORDER BY MIN(delay_days);
+    """
+    df9 = run_query(conn, "BQ9: REVIEW SCORE THEO MỨC ĐỘ TRỄ", q9)
+    reports.append(("BQ9: Review theo Mức độ Trễ", df9))
+
+    # BQ10: Phí vận chuyển theo quartile
+    q10 = """
+    WITH freight_groups AS (
+        SELECT
+            review_score,
+            total_freight,
+            NTILE(4) OVER (ORDER BY total_freight) AS freight_quartile
+        FROM v_review_order_features
+        WHERE total_freight IS NOT NULL
+    )
+    SELECT
+        freight_quartile,
+        COUNT(*) AS order_count,
+        ROUND(AVG(total_freight), 2) AS avg_freight,
+        ROUND(AVG(review_score), 2) AS avg_review_score
+    FROM freight_groups
+    GROUP BY freight_quartile
+    ORDER BY freight_quartile;
+    """
+    df10 = run_query(conn, "BQ10: REVIEW SCORE THEO PHÍ VẬN CHUYỂN", q10)
+    reports.append(("BQ10: Review theo Phí vận chuyển", df10))
+
+    # BQ11: Phức tạp giỏ hàng
+    q11 = """
+    SELECT
+        CASE
+            WHEN item_count = 1 THEN '1 mặt hàng'
+            WHEN item_count BETWEEN 2 AND 3 THEN '2-3 mặt hàng'
+            ELSE '4 mặt hàng trở lên'
+        END AS basket_size,
+        COUNT(*) AS order_count,
+        ROUND(AVG(review_score), 2) AS avg_review_score
+    FROM v_review_order_features
+    WHERE item_count IS NOT NULL
+    GROUP BY basket_size
+    ORDER BY MIN(item_count);
+    """
+    df11 = run_query(conn, "BQ11: REVIEW SCORE THEO ĐỘ PHỨC TẠP ĐƠN HÀNG", q11)
+    reports.append(("BQ11: Review theo Số mặt hàng", df11))
+
+    # BQ12: Phương thức thanh toán đại diện
+    q12 = """
+    SELECT
+        first_payment_type,
+        COUNT(*) AS order_count,
+        ROUND(AVG(review_score), 2) AS avg_review_score
+    FROM v_review_order_features
+    WHERE first_payment_type IS NOT NULL
+    GROUP BY first_payment_type
+    ORDER BY order_count DESC;
+    """
+    df12 = run_query(conn, "BQ12: REVIEW SCORE THEO PHƯƠNG THỨC THANH TOÁN", q12)
+    reports.append(("BQ12: Review theo Thanh toán", df12))
+
+    # BQ13: Điểm đánh giá theo bang
+    q13 = """
+    SELECT
+        customer_state,
+        COUNT(*) AS order_count,
+        ROUND(AVG(review_score), 2) AS avg_review_score,
+        ROUND(100.0 * SUM(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END) / COUNT(*), 2) AS low_score_rate_pct
+    FROM v_review_order_features
+    GROUP BY customer_state
+    HAVING COUNT(*) >= 100
+    ORDER BY low_score_rate_pct DESC;
+    """
+    df13 = run_query(conn, "BQ13: REVIEW SCORE THEO KHU VỰC KHÁCH HÀNG", q13)
+    reports.append(("BQ13: Review theo Bang Khách hàng", df13))
+
+    # BQ14: Dataset cấp đơn hàng cho model
+    q14 = """
+    SELECT
+        review_score AS target,
+        purchase_hour,
+        customer_state,
+        delivery_days,
+        delay_days,
+        is_late,
+        item_count,
+        distinct_products,
+        seller_count,
+        total_item_price,
+        total_freight,
+        total_paid,
+        payment_count,
+        max_installments,
+        first_payment_type
+    FROM v_review_order_features;
+    """
+    df14 = run_query(conn, "BQ14: DATASET FEATURES CẤP ĐƠN HÀNG CHO MODEL", q14, max_rows=20)
+    reports.append(("BQ14: Dataset Features cho Model", df14))
+
+    export_report(reports)
     conn.close()
 
-    # Xuất file báo cáo Markdown tổng hợp
-    with open(REPORT_PATH, "w", encoding="utf-8") as f:
-        f.write("# 📈 Báo cáo Kết quả Phân tích Dữ liệu SQL (Business Insights)\n\n")
-        f.write("**Dự án:** Phân tích Dữ liệu Thương mại Điện tử Olist (Brazil)\n")
-        f.write("**Nguồn:** `data/olist.db` | **Nhóm:** ADY291c-AI2107-Group2\n\n---\n\n")
-        for title, df in reports:
-            f.write(f"### {title}\n\n")
-            f.write(df.to_markdown(index=False))
-            f.write("\n\n---\n\n")
-    print(f"\n✅ Đã lưu toàn bộ báo cáo phân tích ra: {REPORT_PATH}")
+
 
 if __name__ == "__main__":
     main()
