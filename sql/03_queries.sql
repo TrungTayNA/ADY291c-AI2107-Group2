@@ -226,3 +226,201 @@ SELECT
 FROM view_order_clean
 WHERE delivery_days IS NOT NULL;
 
+
+-- ============================================================
+-- PHẦN 5: TRUY VẤN THAM SỐ HÓA Ở CẤP ĐƠN HÀNG (REVIEW MODEL)
+-- ============================================================
+-- Mục tiêu: mỗi dòng đại diện cho một đơn hàng; tổng hợp sản phẩm,
+-- thanh toán và review trước khi JOIN để tránh nhân đôi dữ liệu.
+
+DROP VIEW IF EXISTS v_review_order_features;
+CREATE VIEW v_review_order_features AS
+WITH ranked_reviews AS (
+    SELECT
+        review_id,
+        order_id,
+        review_score,
+        review_creation_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY order_id
+            ORDER BY review_creation_date DESC, review_id DESC
+        ) AS review_rank
+    FROM order_reviews
+),
+items_by_order AS (
+    SELECT
+        order_id,
+        COUNT(*) AS item_count,
+        COUNT(DISTINCT product_id) AS distinct_products,
+        COUNT(DISTINCT seller_id) AS seller_count,
+        SUM(price) AS total_item_price,
+        SUM(freight_value) AS total_freight,
+        SUM(item_total) AS item_total_sum,
+        AVG(price) AS avg_item_price
+    FROM order_items
+    GROUP BY order_id
+),
+payments_by_order AS (
+    SELECT
+        order_id,
+        SUM(payment_value) AS total_paid,
+        COUNT(*) AS payment_count,
+        MAX(payment_installments) AS max_installments,
+        MAX(CASE
+            WHEN payment_sequential = 1 THEN payment_type
+        END) AS first_payment_type
+    FROM order_payments
+    GROUP BY order_id
+)
+SELECT
+    o.order_id,
+    c.customer_unique_id,
+    c.customer_state,
+    o.purchase_year_month,
+    o.purchase_hour,
+    o.delivery_days,
+    o.delay_days,
+    o.is_late,
+    i.item_count,
+    i.distinct_products,
+    i.seller_count,
+    i.total_item_price,
+    i.total_freight,
+    i.item_total_sum,
+    i.avg_item_price,
+    p.total_paid,
+    p.payment_count,
+    p.max_installments,
+    p.first_payment_type,
+    r.review_score
+FROM orders o
+JOIN ranked_reviews r
+    ON o.order_id = r.order_id
+   AND r.review_rank = 1
+JOIN customers c
+    ON o.customer_id = c.customer_id
+LEFT JOIN items_by_order i
+    ON o.order_id = i.order_id
+LEFT JOIN payments_by_order p
+    ON o.order_id = p.order_id
+WHERE o.order_status = 'delivered';
+
+-- 5.1 Phân bố review_score và tỷ lệ mất cân bằng lớp
+SELECT
+    review_score,
+    COUNT(*) AS order_count,
+    ROUND(
+        100.0 * COUNT(*) /
+        (SELECT COUNT(*) FROM v_review_order_features),
+        2
+    ) AS percentage
+FROM v_review_order_features
+GROUP BY review_score
+ORDER BY review_score;
+
+-- 5.2 So sánh đơn trễ và đúng hạn/sớm
+SELECT
+    CASE WHEN is_late = 1 THEN 'Giao trễ'
+         ELSE 'Đúng hạn hoặc sớm'
+    END AS delivery_group,
+    COUNT(*) AS order_count,
+    ROUND(AVG(review_score), 2) AS avg_review_score,
+    ROUND(
+        100.0 * SUM(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS low_score_rate_pct
+FROM v_review_order_features
+GROUP BY is_late;
+
+-- 5.3 Nhóm mức độ trễ theo ngày
+SELECT
+    CASE
+        WHEN delay_days <= 0 THEN 'Sớm hoặc đúng hạn'
+        WHEN delay_days <= 3 THEN 'Trễ 1-3 ngày'
+        WHEN delay_days <= 7 THEN 'Trễ 4-7 ngày'
+        ELSE 'Trễ trên 7 ngày'
+    END AS delay_group,
+    COUNT(*) AS order_count,
+    ROUND(AVG(review_score), 2) AS avg_review_score
+FROM v_review_order_features
+WHERE delay_days IS NOT NULL
+GROUP BY delay_group
+ORDER BY MIN(delay_days);
+
+-- 5.4 Chia phí vận chuyển thành 4 phần theo thứ tự giá trị (NTILE)
+WITH freight_groups AS (
+    SELECT
+        review_score,
+        total_freight,
+        NTILE(4) OVER (ORDER BY total_freight) AS freight_quartile
+    FROM v_review_order_features
+    WHERE total_freight IS NOT NULL
+)
+SELECT
+    freight_quartile,
+    COUNT(*) AS order_count,
+    ROUND(AVG(total_freight), 2) AS avg_freight,
+    ROUND(AVG(review_score), 2) AS avg_review_score
+FROM freight_groups
+GROUP BY freight_quartile
+ORDER BY freight_quartile;
+
+-- 5.5 So sánh độ phức tạp giỏ hàng theo số mặt hàng
+SELECT
+    CASE
+        WHEN item_count = 1 THEN '1 mặt hàng'
+        WHEN item_count BETWEEN 2 AND 3 THEN '2-3 mặt hàng'
+        ELSE '4 mặt hàng trở lên'
+    END AS basket_size,
+    COUNT(*) AS order_count,
+    ROUND(AVG(review_score), 2) AS avg_review_score
+FROM v_review_order_features
+WHERE item_count IS NOT NULL
+GROUP BY basket_size
+ORDER BY MIN(item_count);
+
+-- 5.6 Điểm đánh giá theo phương thức thanh toán đại diện
+SELECT
+    first_payment_type,
+    COUNT(*) AS order_count,
+    ROUND(AVG(review_score), 2) AS avg_review_score
+FROM v_review_order_features
+WHERE first_payment_type IS NOT NULL
+GROUP BY first_payment_type
+ORDER BY order_count DESC;
+
+-- 5.7 Điểm đánh giá theo khu vực với ngưỡng tối thiểu 100 đơn
+SELECT
+    customer_state,
+    COUNT(*) AS order_count,
+    ROUND(AVG(review_score), 2) AS avg_review_score,
+    ROUND(
+        100.0 * SUM(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS low_score_rate_pct
+FROM v_review_order_features
+GROUP BY customer_state
+HAVING COUNT(*) >= 100
+ORDER BY low_score_rate_pct DESC;
+
+-- 5.8 Dataset cấp đơn hàng để mã hóa và huấn luyện model
+SELECT
+    review_score AS target,
+    purchase_hour,
+    customer_state,
+    delivery_days,
+    delay_days,
+    is_late,
+    item_count,
+    distinct_products,
+    seller_count,
+    total_item_price,
+    total_freight,
+    total_paid,
+    payment_count,
+    max_installments,
+    first_payment_type
+FROM v_review_order_features;
+
