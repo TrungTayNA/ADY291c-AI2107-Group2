@@ -9,6 +9,7 @@ import sqlite3
 import pandas as pd
 import os
 import re
+import tempfile
 import time
 
 # Cau hinh duong dan
@@ -18,19 +19,45 @@ SQL_DIR     = os.path.join(BASE_DIR, "sql")
 DB_PATH     = os.path.join(BASE_DIR, "data", "olist.db")
 
 CSV_MAP = {
-    "stg_customers":         "clean_olist_customers_dataset.csv",
-    "stg_orders":            "clean_olist_orders_dataset.csv",
-    "stg_order_items":       "clean_olist_order_items_dataset.csv",
-    "stg_order_payments":    "clean_olist_order_payments_dataset.csv",
-    "stg_order_reviews":     "clean_olist_order_reviews_dataset.csv",
-    "stg_products":          "clean_olist_products_dataset.csv",
-    "stg_sellers":           "clean_olist_sellers_dataset.csv",
-    "stg_geolocations":      "clean_olist_geolocation_dataset.csv",
-    "stg_product_categories":"clean_product_category_name_translation.csv",
+    "stg_customers":          "clean_olist_customers.csv",
+    "stg_orders":             "clean_olist_orders.csv",
+    "stg_order_items":        "clean_olist_order_items.csv",
+    "stg_order_payments":     "clean_olist_payments.csv",
+    "stg_order_reviews":      "clean_olist_reviews.csv",
+    "stg_products":            "clean_olist_products.csv",
+    "stg_sellers":             "clean_olist_sellers.csv",
+    "stg_geolocations":        "clean_olist_geolocation.csv",
+    "stg_product_categories": "clean_olist_category_translation.csv",
 }
+
+STAGING_COLUMN_ALIASES = {
+    "stg_orders": {"is_delayed": "is_late"},
+    "stg_order_items": {"item_total_value": "item_total"},
+    "stg_order_reviews": {"has_review_comment": "has_comment"},
+}
+
 
 def log(msg):
     print(msg, flush=True)
+
+
+def validate_inputs():
+    required_paths = [
+        *(os.path.join(PROCESSED, filename) for filename in CSV_MAP.values()),
+        os.path.join(SQL_DIR, "01_schema.sql"),
+        os.path.join(SQL_DIR, "02_load_data.sql"),
+        os.path.join(SQL_DIR, "03_queries.sql"),
+    ]
+    missing_paths = [path for path in required_paths if not os.path.isfile(path)]
+    if missing_paths:
+        missing_list = "\n".join(f"  - {path}" for path in missing_paths)
+        raise FileNotFoundError(
+            "Thiếu dữ liệu đầu vào hoặc file SQL cần thiết:\n"
+            f"{missing_list}\n"
+            "Hãy chạy Notebooks/02_preprocessing.ipynb trước, sau đó chạy lại "
+            "scripts/database/build_db.py từ thư mục gốc dự án."
+        )
+
 
 def run_schema(conn, filename):
     """DDL (CREATE TABLE/INDEX/VIEW): executescript() - auto-commit la OK."""
@@ -53,25 +80,19 @@ def run_dml(conn, filename):
     statements = [s.strip() for s in raw.split(";") if s.strip()]
     cur = conn.cursor()
     for stmt in statements:
-        clean = re.sub(r'--[^\n]*', '', stmt).strip()
-        if not clean:
+        statement = re.sub(r'--[^\n]*', '', stmt).strip()
+        if not statement:
             continue
-        try:
-            cur.execute(stmt)
-        except sqlite3.OperationalError as e:
-            log(f"  [WARN] {e} | {stmt[:60]}")
+        cur.execute(statement)
     conn.commit()
 
 def load_staging(conn):
     log("\n[STEP 1] Nap CSV vao Staging tables...")
     for table, csv_file in CSV_MAP.items():
         csv_path = os.path.join(PROCESSED, csv_file)
-        if not os.path.exists(csv_path):
-            log(f"  WARN: Khong tim thay: {csv_file}")
-            continue
         t0 = time.time()
         df = pd.read_csv(csv_path, low_memory=False)
-        # Ghi vao cung connection -> cung transaction voi phan transform
+        df = df.rename(columns=STAGING_COLUMN_ALIASES.get(table, {}))
         df.to_sql(table, conn, if_exists="replace", index=False, chunksize=10000)
         log(f"  OK {table:32s} -> {len(df):>7,} rows  ({time.time()-t0:.1f}s)")
 
@@ -92,10 +113,7 @@ def create_views(conn):
     )
     cur = conn.cursor()
     for stmt in view_blocks:
-        try:
-            cur.execute(stmt)
-        except sqlite3.OperationalError as e:
-            log(f"  [WARN] {e}")
+        cur.execute(stmt)
     conn.commit()
     log("  OK Views da tao")
 
@@ -114,29 +132,31 @@ def verify(conn):
     log(f"\n  TOTAL: {total:,} ban ghi trong relational tables")
 
     # Kiem tra view
-    for v in ["view_order_clean", "v_sales_monthly", "v_delivery_kpi",
+    for v in ["v_review_order_features", "v_model_features_at_purchase",
+              "v_model_features_post_delivery", "v_sales_monthly", "v_delivery_kpi",
               "v_category_performance", "v_customer_rfm",
               "v_seller_performance", "v_payment_mix"]:
-        try:
-            n = conn.execute(f"SELECT COUNT(*) FROM {v}").fetchone()[0]
-            log(f"  [view] {v:30s} {n:>7,} rows")
-        except sqlite3.OperationalError as e:
-            log(f"  [WARN] {v}: {e}")
+        n = conn.execute(f"SELECT COUNT(*) FROM {v}").fetchone()[0]
+        log(f"  [view] {v:30s} {n:>7,} rows")
 
 def main():
     log("=" * 60)
     log("  BUILD: olist.db - ADY291c-AI2107-Group2")
     log("=" * 60)
 
-    if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
-        log(f"Deleted old DB: {DB_PATH}")
-
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA synchronous = NORMAL")
+    validate_inputs()
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    fd, temp_db_path = tempfile.mkstemp(
+        prefix=".olist-build-", suffix=".db", dir=os.path.dirname(DB_PATH)
+    )
+    os.close(fd)
+    os.remove(temp_db_path)
+    conn = None
 
     try:
+        conn = sqlite3.connect(temp_db_path)
+        conn.execute("PRAGMA synchronous = NORMAL")
+
         log("\n[STEP 0] Tao schema...")
         run_schema(conn, "01_schema.sql")
         log("  OK Schema tao xong")
@@ -147,19 +167,27 @@ def main():
         verify(conn)
 
         conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.close()
+        conn = None
+
+        os.replace(temp_db_path, DB_PATH)
         size_mb = os.path.getsize(DB_PATH) / 1024 / 1024
         log(f"\nDONE! File: {DB_PATH}")
         log(f"Size : {size_mb:.1f} MB")
         log("=" * 60)
 
     except Exception as e:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
+            conn.close()
         log(f"\nERROR: {e}")
         import traceback; traceback.print_exc()
         raise
     finally:
-        conn.close()
+        for path in (temp_db_path, temp_db_path + "-wal", temp_db_path + "-shm"):
+            if os.path.exists(path):
+                os.remove(path)
 
 if __name__ == "__main__":
     main()
-

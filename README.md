@@ -29,7 +29,7 @@ Run commands from the repository root so the scripts can find the `data` and `sq
 streamlit run dashboard\app.py
 
 # Rebuild the SQLite database from cleaned CSV files
-python scripts\database\build_db.py
+.\.venv\Scripts\python.exe scripts\database\build_db.py
 
 # Run the SQL business queries (requires data\olist.db)
 python scripts\database\run_queries.py
@@ -38,7 +38,7 @@ python scripts\database\run_queries.py
 python scripts\modeling\run_ml.py
 ```
 
-`build_db.py` replaces the existing `data\olist.db`. The cleaned CSV files must be present in `data\processed` before running it. The dashboard reads `data\processed\olist_master.csv`.
+`build_db.py` replaces the existing `data\olist.db` after a successful build. The cleaned CSV files must be present in `data\processed` before running it; if they are missing, run `Notebooks\02_preprocessing.ipynb` first. The dashboard reads `data\processed\olist_master.csv`.
 
 ## Team Members
 - Phùng Văn Tráng - HE200218
