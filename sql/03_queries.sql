@@ -301,25 +301,37 @@ ratio_quartiles AS (
     WHERE freight_to_price_pct IS NOT NULL
 )
 SELECT
-    'Tong phi ship' AS metric,
-    freight_quartile AS group_number,
+    'Tong phi van chuyen' AS loai_chi_phi,
+    CASE freight_quartile
+        WHEN 1 THEN 'Nhom 1 - Thap nhat'
+        WHEN 2 THEN 'Nhom 2 - Thap'
+        WHEN 3 THEN 'Nhom 3 - Cao'
+        ELSE 'Nhom 4 - Cao nhat'
+    END AS muc_phi,
+    freight_quartile AS nhom_so,
     COUNT(*) AS order_count,
-    ROUND(AVG(total_freight), 2) AS avg_value,
-    ROUND(AVG(review_score), 2) AS avg_review_score,
-    ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS low_score_pct
+    ROUND(AVG(total_freight), 2) AS gia_tri_trung_binh,
+    ROUND(AVG(review_score), 2) AS review_trung_binh,
+    ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
 FROM freight_quartiles
 GROUP BY freight_quartile
 UNION ALL
 SELECT
-    'Ty le phi/gia hang' AS metric,
-    ratio_quartile AS group_number,
+    'Ty le phi ship / gia hang' AS loai_chi_phi,
+    CASE ratio_quartile
+        WHEN 1 THEN 'Nhom 1 - Thap nhat'
+        WHEN 2 THEN 'Nhom 2 - Thap'
+        WHEN 3 THEN 'Nhom 3 - Cao'
+        ELSE 'Nhom 4 - Cao nhat'
+    END AS muc_phi,
+    ratio_quartile AS nhom_so,
     COUNT(*) AS order_count,
-    ROUND(AVG(freight_to_price_pct), 2) AS avg_value,
-    ROUND(AVG(review_score), 2) AS avg_review_score,
-    ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS low_score_pct
+    ROUND(AVG(freight_to_price_pct), 2) AS gia_tri_trung_binh,
+    ROUND(AVG(review_score), 2) AS review_trung_binh,
+    ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
 FROM ratio_quartiles
 GROUP BY ratio_quartile
-ORDER BY metric, group_number;
+ORDER BY loai_chi_phi, nhom_so;
 
 
 -- ============================================================

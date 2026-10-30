@@ -187,22 +187,36 @@ QUERIES = [
             FROM v_review_order_features
             WHERE freight_to_price_pct IS NOT NULL
         )
-        SELECT 'Tong phi ship' AS metric,
-               group_number,
+        SELECT 'Tong phi van chuyen' AS loai_chi_phi,
+               CASE group_number
+                   WHEN 1 THEN 'Nhom 1 - Thap nhat'
+                   WHEN 2 THEN 'Nhom 2 - Thap'
+                   WHEN 3 THEN 'Nhom 3 - Cao'
+                   ELSE 'Nhom 4 - Cao nhat'
+               END AS muc_phi,
+               group_number AS nhom_so,
                COUNT(*) AS order_count,
-               ROUND(AVG(total_freight), 2) AS avg_value,
-               ROUND(AVG(review_score), 2) AS avg_review_score
+               ROUND(AVG(total_freight), 2) AS gia_tri_trung_binh,
+               ROUND(AVG(review_score), 2) AS review_trung_binh,
+               ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
         FROM freight_quartiles
         GROUP BY group_number
         UNION ALL
-        SELECT 'Ty le phi/gia hang' AS metric,
-               group_number,
+        SELECT 'Ty le phi ship / gia hang' AS loai_chi_phi,
+               CASE group_number
+                   WHEN 1 THEN 'Nhom 1 - Thap nhat'
+                   WHEN 2 THEN 'Nhom 2 - Thap'
+                   WHEN 3 THEN 'Nhom 3 - Cao'
+                   ELSE 'Nhom 4 - Cao nhat'
+               END AS muc_phi,
+               group_number AS nhom_so,
                COUNT(*) AS order_count,
-               ROUND(AVG(freight_to_price_pct), 2) AS avg_value,
-               ROUND(AVG(review_score), 2) AS avg_review_score
+               ROUND(AVG(freight_to_price_pct), 2) AS gia_tri_trung_binh,
+               ROUND(AVG(review_score), 2) AS review_trung_binh,
+               ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
         FROM ratio_quartiles
         GROUP BY group_number
-        ORDER BY metric, group_number;
+        ORDER BY loai_chi_phi, nhom_so;
         """,
     ),
     (
