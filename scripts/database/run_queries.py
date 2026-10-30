@@ -177,12 +177,12 @@ QUERIES = [
         "Q06: Phi van chuyen va ty le phi/gia hang anh huong review?",
         """
         WITH freight_quartiles AS (
-            SELECT *,
+            SELECT total_freight, review_score,
                    NTILE(4) OVER (ORDER BY total_freight) AS group_number
             FROM v_review_order_features
         ),
         ratio_quartiles AS (
-            SELECT *,
+            SELECT freight_to_price_pct, review_score,
                    NTILE(4) OVER (ORDER BY freight_to_price_pct) AS group_number
             FROM v_review_order_features
             WHERE freight_to_price_pct IS NOT NULL

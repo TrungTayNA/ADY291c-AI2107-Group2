@@ -290,12 +290,12 @@ ORDER BY MIN(CASE
 -- Q06: PHI VAN CHUYEN VA TY LE PHI/ GIA HANG CO ANH HUONG REVIEW?
 -- ============================================================
 WITH freight_quartiles AS (
-    SELECT *,
+    SELECT total_freight, review_score,
            NTILE(4) OVER (ORDER BY total_freight) AS freight_quartile
     FROM v_review_order_features
 ),
 ratio_quartiles AS (
-    SELECT *,
+    SELECT freight_to_price_pct, review_score,
            NTILE(4) OVER (ORDER BY freight_to_price_pct) AS ratio_quartile
     FROM v_review_order_features
     WHERE freight_to_price_pct IS NOT NULL
