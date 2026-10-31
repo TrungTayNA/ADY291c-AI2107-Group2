@@ -1,6 +1,6 @@
 # Tài liệu Cơ sở dữ liệu (Database Documentation)
 
-Tài liệu mô tả thiết kế SQLite database tại [`data/olist.db`](../data/olist.db) của dự án phân tích thương mại điện tử Olist Brazil (2016–2018).
+Tài liệu mô tả thiết kế SQLite database tại [`scripts/database/olist.db`](../scripts/database/olist.db) của dự án phân tích thương mại điện tử Olist Brazil (2016–2018).
 
 ---
 
@@ -165,7 +165,7 @@ erDiagram
 import sqlite3
 import pandas as pd
 
-conn = sqlite3.connect('../data/olist.db')
+conn = sqlite3.connect('../scripts/database/olist.db')
 
 # Dung view tong hop (tuong duong view_pr_clean cua Group3)
 df = pd.read_sql_query("SELECT * FROM view_order_clean LIMIT 5", conn)
@@ -186,7 +186,7 @@ python scripts/database/build_db.py
 python scripts/database/check_db.py
 ```
 
-> Chạy các lệnh trên từ thư mục gốc `ADY291c-AI2107-Group2`. `build_db.py` sẽ xóa và tạo lại `data/olist.db`, sau đó nạp CSV, chuyển staging sang bảng quan hệ và tạo view.
+> Chạy các lệnh trên từ thư mục gốc `ADY291c-AI2107-Group2`. `build_db.py` sẽ xóa và tạo lại `scripts/database/olist.db`, sau đó nạp CSV, chuyển staging sang bảng quan hệ và tạo view.
 
 ---
 
@@ -232,7 +232,7 @@ python scripts/database/check_db.py
 Các lệnh dưới đây cần SQLite command-line (`sqlite3`) và chạy tại thư mục gốc:
 
 ```powershell
-sqlite3 data/olist.db ".read sql/01_schema.sql"
+sqlite3 scripts/database/olist.db ".read sql/01_schema.sql"
 ```
 
 Lệnh trên chỉ tạo bảng, index và sáu view nền; nó chưa nạp CSV.
@@ -240,13 +240,13 @@ Lệnh trên chỉ tạo bảng, index và sáu view nền; nó chưa nạp CSV.
 `02_load_data.sql` chỉ chạy được sau khi đã có các bảng `stg_*` và dữ liệu CSV bên trong. Script `build_db.py` đảm nhiệm bước nạp staging bằng pandas. Nếu staging đã được nạp, có thể chạy chuyển đổi thủ công:
 
 ```powershell
-sqlite3 data/olist.db ".read sql/02_load_data.sql"
+sqlite3 scripts/database/olist.db ".read sql/02_load_data.sql"
 ```
 
 Sau khi có dữ liệu quan hệ, chạy các truy vấn phân tích và tạo `view_order_clean`:
 
 ```powershell
-sqlite3 data/olist.db ".read sql/03_queries.sql"
+sqlite3 scripts/database/olist.db ".read sql/03_queries.sql"
 ```
 
 Lệnh cuối in kết quả các câu `SELECT` trong terminal. Khi chạy thông qua `build_db.py`, script chỉ trích lệnh tạo `view_order_clean`; các câu `SELECT` trong file không tự in kết quả. Để xem lại từng nhóm kết quả, chạy riêng câu SQL cần phân tích bằng SQLite CLI hoặc đọc view bằng Notebook, ví dụ:
@@ -256,4 +256,3 @@ SELECT * FROM v_sales_monthly ORDER BY purchase_year_month;
 SELECT * FROM v_delivery_kpi ORDER BY late_rate_pct DESC;
 SELECT * FROM v_customer_rfm ORDER BY monetary DESC LIMIT 20;
 ```
-
