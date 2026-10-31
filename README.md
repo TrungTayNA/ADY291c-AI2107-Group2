@@ -31,14 +31,14 @@ streamlit run dashboard\app.py
 # Rebuild the SQLite database from cleaned CSV files
 .\.venv\Scripts\python.exe scripts\database\build_db.py
 
-# Run the SQL business queries (requires scripts\database\olist.db)
+# Run the SQL business queries (requires data\olist.db)
 python scripts\database\run_queries.py
 
-# Run the machine-learning analysis (requires scripts\database\olist.db)
+# Run the machine-learning analysis (requires data\olist.db)
 python scripts\modeling\run_ml.py
 ```
 
-`build_db.py` replaces the existing `data\olist.db`. The cleaned CSV files must be present in `data\processed` before running it. The dashboard reads `data\processed\olist_master.csv`.
+`build_db.py` replaces the existing `data\olist.db` after a successful build. The cleaned CSV files must be present in `data\processed` before running it; if they are missing, run `Notebooks\02_preprocessing.ipynb` first. The dashboard reads `data\processed\olist_master.csv`.
 
 ## Team Members
 - Phùng Văn Tráng - HE200218

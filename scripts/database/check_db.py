@@ -1,10 +1,6 @@
 import sqlite3
-from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-DB_PATH = BASE_DIR / "scripts" / "database" / "olist.db"
-
-conn = sqlite3.connect(DB_PATH)
+conn = sqlite3.connect('data/olist.db')
 
 print('=== TABLES ===')
 tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").fetchall()
@@ -64,3 +60,4 @@ print(df2.to_string(index=False))
 
 conn.close()
 print('\nDone.')
+

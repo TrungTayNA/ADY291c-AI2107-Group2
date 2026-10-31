@@ -18,9 +18,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
-from pathlib import Path
-BASE_DIR = Path(__file__).resolve().parents[2]
-DB_PATH  = BASE_DIR / 'scripts' / 'database' / 'olist.db'
+DB_PATH  = 'data/olist.db'
 OUT_DIR  = 'data/processed'
 PALETTE  = ['#2196F3', '#FF9800', '#4CAF50', '#E91E63']
 SEG_COLORS = {'Champion':'#2196F3','Loyal':'#4CAF50','At Risk':'#FF9800','New/Occasional':'#E91E63'}
