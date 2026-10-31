@@ -1,0 +1,53 @@
+﻿Bảng,Tên Thuộc Tính,Kiểu Vật Lý (Dtype),Kiểu Ngữ Nghĩa (Semantic Type)
+orders,order_id,str,Mã định danh (ID Key)
+orders,customer_id,str,Mã định danh (ID Key)
+orders,order_status,str,Categorical / Text
+orders,order_purchase_timestamp,str,Datetime (Đang bị lưu chuỗi Object)
+orders,order_approved_at,str,Categorical / Text
+orders,order_delivered_carrier_date,str,Datetime (Đang bị lưu chuỗi Object)
+orders,order_delivered_customer_date,str,Datetime (Đang bị lưu chuỗi Object)
+orders,order_estimated_delivery_date,str,Datetime (Đang bị lưu chuỗi Object)
+order_items,order_id,str,Mã định danh (ID Key)
+order_items,order_item_id,int64,Numerical (Số thực/nguyên)
+order_items,product_id,str,Mã định danh (ID Key)
+order_items,seller_id,str,Mã định danh (ID Key)
+order_items,shipping_limit_date,str,Datetime (Đang bị lưu chuỗi Object)
+order_items,price,float64,Numerical (Số thực/nguyên)
+order_items,freight_value,float64,Numerical (Số thực/nguyên)
+payments,order_id,str,Mã định danh (ID Key)
+payments,payment_sequential,int64,Numerical (Số thực/nguyên)
+payments,payment_type,str,Categorical / Text
+payments,payment_installments,int64,Numerical (Số thực/nguyên)
+payments,payment_value,float64,Numerical (Số thực/nguyên)
+reviews,review_id,str,Mã định danh (ID Key)
+reviews,order_id,str,Mã định danh (ID Key)
+reviews,review_score,int64,Biến Thứ bậc (Ordinal / Review 1-5)
+reviews,review_comment_title,str,Categorical / Text
+reviews,review_comment_message,str,Categorical / Text
+reviews,review_creation_date,str,Datetime (Đang bị lưu chuỗi Object)
+reviews,review_answer_timestamp,str,Datetime (Đang bị lưu chuỗi Object)
+products,product_id,str,Mã định danh (ID Key)
+products,product_category_name,str,Categorical / Text
+products,product_name_lenght,float64,Numerical (Số thực/nguyên)
+products,product_description_lenght,float64,Numerical (Số thực/nguyên)
+products,product_photos_qty,float64,Numerical (Số thực/nguyên)
+products,product_weight_g,float64,Numerical (Số thực/nguyên)
+products,product_length_cm,float64,Numerical (Số thực/nguyên)
+products,product_height_cm,float64,Numerical (Số thực/nguyên)
+products,product_width_cm,float64,Numerical (Số thực/nguyên)
+customers,customer_id,str,Mã định danh (ID Key)
+customers,customer_unique_id,str,Mã định danh (ID Key)
+customers,customer_zip_code_prefix,str,Categorical / Text
+customers,customer_city,str,Categorical / Text
+customers,customer_state,str,Categorical / Text
+sellers,seller_id,str,Mã định danh (ID Key)
+sellers,seller_zip_code_prefix,str,Categorical / Text
+sellers,seller_city,str,Categorical / Text
+sellers,seller_state,str,Categorical / Text
+geolocation,geolocation_zip_code_prefix,str,Categorical / Text
+geolocation,geolocation_lat,float64,Numerical (Số thực/nguyên)
+geolocation,geolocation_lng,float64,Numerical (Số thực/nguyên)
+geolocation,geolocation_city,str,Categorical / Text
+geolocation,geolocation_state,str,Categorical / Text
+category_translation,product_category_name,str,Categorical / Text
+category_translation,product_category_name_english,str,Categorical / Text
