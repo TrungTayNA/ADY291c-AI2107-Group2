@@ -19,7 +19,7 @@ if hasattr(sys.stderr, "reconfigure"):
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-DB_PATH = BASE_DIR / "data" / "olist.db"
+DB_PATH = BASE_DIR / "scripts" / "database" / "olist.db"
 SQL_PATH = BASE_DIR / "sql" / "03_queries.sql"
 REPORT_PATH = BASE_DIR / "data" / "processed" / "sql_business_report.md"
 

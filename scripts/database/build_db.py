@@ -15,7 +15,8 @@ import time
 BASE_DIR    = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROCESSED   = os.path.join(BASE_DIR, "data", "processed")
 SQL_DIR     = os.path.join(BASE_DIR, "sql")
-DB_PATH     = os.path.join(BASE_DIR, "database", "olist.db")
+DB_PATH     = os.path.join(BASE_DIR, "scripts", "database", "olist.db")
+TEMP_DB_PATH = DB_PATH + ".tmp"
 
 CSV_MAP = {
     "stg_customers":         "clean_olist_customers_dataset.csv",
@@ -128,13 +129,12 @@ def main():
     log("  BUILD: olist.db - ADY291c-AI2107-Group2")
     log("=" * 60)
 
-    if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
-        log(f"Deleted old DB: {DB_PATH}")
+    for path in (TEMP_DB_PATH, TEMP_DB_PATH + "-shm", TEMP_DB_PATH + "-wal"):
+        if os.path.exists(path):
+            os.remove(path)
 
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("PRAGMA journal_mode = WAL")
+    conn = sqlite3.connect(TEMP_DB_PATH)
+    conn.execute("PRAGMA journal_mode = DELETE")
     conn.execute("PRAGMA synchronous = NORMAL")
 
     try:
@@ -148,6 +148,27 @@ def main():
         verify(conn)
 
         conn.commit()
+        conn.close()
+        conn = None
+
+        replaced = False
+        for attempt in range(20):
+            try:
+                os.replace(TEMP_DB_PATH, DB_PATH)
+                replaced = True
+                break
+            except PermissionError:
+                if attempt == 19:
+                    raise RuntimeError(
+                        f"Cannot replace {DB_PATH}: the database is locked by another process. "
+                        "Close Streamlit, database viewers, Python scripts, or VS Code SQLite extensions, then run build_db.py again."
+                    )
+                log(f"  Database is locked; retrying replacement ({attempt + 1}/20)...")
+                time.sleep(0.25)
+
+        if not replaced:
+            raise RuntimeError("Database replacement failed")
+
         size_mb = os.path.getsize(DB_PATH) / 1024 / 1024
         log(f"\nDONE! File: {DB_PATH}")
         log(f"Size : {size_mb:.1f} MB")
@@ -159,7 +180,8 @@ def main():
         import traceback; traceback.print_exc()
         raise
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 if __name__ == "__main__":
     main()
