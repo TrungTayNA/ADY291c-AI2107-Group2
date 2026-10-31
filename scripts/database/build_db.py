@@ -15,7 +15,7 @@ import time
 BASE_DIR    = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROCESSED   = os.path.join(BASE_DIR, "data", "processed")
 SQL_DIR     = os.path.join(BASE_DIR, "sql")
-DB_PATH     = os.path.join(BASE_DIR, "data", "olist.db")
+DB_PATH     = os.path.join(BASE_DIR, "database", "olist.db")
 
 CSV_MAP = {
     "stg_customers":         "clean_olist_customers_dataset.csv",
@@ -132,6 +132,7 @@ def main():
         os.remove(DB_PATH)
         log(f"Deleted old DB: {DB_PATH}")
 
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA synchronous = NORMAL")
@@ -162,4 +163,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
