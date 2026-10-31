@@ -5,19 +5,19 @@ Pattern: Staging -> Relational (3NF) -> Analytical Views
 Cach chay: python scripts/database/build_db.py
 """
 
-import sqlite3
-import pandas as pd
 import os
 import re
-import tempfile
 import time
+import sqlite3
+import traceback
+
+import pandas as pd
 
 # Cau hinh duong dan
-BASE_DIR    = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-PROCESSED   = os.path.join(BASE_DIR, "data", "processed")
-SQL_DIR     = os.path.join(BASE_DIR, "sql")
-DB_PATH     = os.path.join(BASE_DIR, "scripts", "database", "olist.db")
-TEMP_DB_PATH = DB_PATH + ".tmp"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROCESSED = os.path.join(BASE_DIR, "data", "processed")
+SQL_DIR = os.path.join(BASE_DIR, "sql")
+DB_PATH = os.path.join(BASE_DIR, "scripts", "database", "olist.db")
 
 CSV_MAP = {
     "stg_customers":          "clean_olist_customers.csv",
@@ -58,6 +58,12 @@ def validate_inputs():
             "Hãy chạy Notebooks/02_preprocessing.ipynb trước, sau đó chạy lại "
             "scripts/database/build_db.py từ thư mục gốc dự án."
         )
+
+
+def remove_old_database():
+    if os.path.exists(DB_PATH):
+        os.remove(DB_PATH)
+        log(f"Deleted old DB: {DB_PATH}")
 
 
 def run_schema(conn, filename):
@@ -140,22 +146,12 @@ def verify(conn):
         n = conn.execute(f"SELECT COUNT(*) FROM {v}").fetchone()[0]
         log(f"  [view] {v:30s} {n:>7,} rows")
 
-def main():
-    log("=" * 60)
-    log("  BUILD: olist.db - ADY291c-AI2107-Group2")
-    log("=" * 60)
 
-    if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
-        log(f"Deleted old DB: {DB_PATH}")
-
-    conn = sqlite3.connect(TEMP_DB_PATH)
-    conn.execute("PRAGMA journal_mode = DELETE")
-    conn.execute("PRAGMA synchronous = NORMAL")
->>>>>>> fa95e692592dcfa598d8ed69b0eb58d17bde67ff
-
+def build_database():
+    conn = None
     try:
-        conn = sqlite3.connect(temp_db_path)
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA journal_mode = DELETE")
         conn.execute("PRAGMA synchronous = NORMAL")
 
         log("\n[STEP 0] Tao schema...")
@@ -168,20 +164,33 @@ def main():
         verify(conn)
 
         conn.commit()
-        size_mb = os.path.getsize(DB_PATH) / 1024 / 1024
+    except Exception:
+        if conn is not None:
+            conn.rollback()
+        raise
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def main():
+    log("=" * 60)
+    log("  BUILD: olist.db - ADY291c-AI2107-Group2")
+    log("=" * 60)
+
+    try:
+        validate_inputs()
+        remove_old_database()
+        build_database()
+
+        size_mb = os.path.getsize(DB_PATH) / (1024 * 1024)
         log(f"\nDONE! File: {DB_PATH}")
         log(f"Size : {size_mb:.1f} MB")
         log("=" * 60)
-
     except Exception as e:
-        if conn is not None:
-            conn.rollback()
-            conn.close()
         log(f"\nERROR: {e}")
-        import traceback; traceback.print_exc()
+        traceback.print_exc()
         raise
-    finally:
-        conn.close()
 
 if __name__ == "__main__":
     main()
