@@ -176,47 +176,63 @@ QUERIES = [
     (
         "Q06: Phi van chuyen va ty le phi/gia hang anh huong review?",
         """
-        WITH freight_quartiles AS (
-            SELECT total_freight, review_score,
-                   NTILE(4) OVER (ORDER BY total_freight) AS group_number
+        WITH ship_fee_data AS (
+            SELECT total_freight AS metric_value, review_score
             FROM v_review_order_features
         ),
-        ratio_quartiles AS (
-            SELECT freight_to_price_pct, review_score,
-                   NTILE(4) OVER (ORDER BY freight_to_price_pct) AS group_number
+        ship_fee_quartiles AS (
+            -- NTILE(4) chia tung don thanh 4 nhom phi ship gan bang nhau.
+            SELECT metric_value, review_score,
+                   NTILE(4) OVER (ORDER BY metric_value) AS quartile_number
+            FROM ship_fee_data
+        ),
+        ship_fee_ratio_data AS (
+            SELECT freight_to_price_pct AS metric_value, review_score
             FROM v_review_order_features
             WHERE freight_to_price_pct IS NOT NULL
+        ),
+        ship_fee_ratio_quartiles AS (
+            -- NTILE(4) chia tung don theo ty le phi ship/gia tri hang hoa.
+            SELECT metric_value, review_score,
+                   NTILE(4) OVER (ORDER BY metric_value) AS quartile_number
+            FROM ship_fee_ratio_data
+        ),
+        ship_fee_summary AS (
+            SELECT 'Tong phi ship (BRL)' AS chi_so,
+                   CASE quartile_number
+                       WHEN 1 THEN '1 - 25% phi thap nhat'
+                       WHEN 2 THEN '2 - Tu 25%-50%'
+                       WHEN 3 THEN '3 - Tu 50%-75%'
+                       ELSE '4 - 25% phi cao nhat'
+                   END AS nhom_phi,
+                   quartile_number AS nhom_quartile,
+                   COUNT(*) AS so_don,
+                   ROUND(AVG(metric_value), 2) AS gia_tri_trung_binh,
+                   ROUND(AVG(review_score), 2) AS diem_review_tb,
+                   ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
+            FROM ship_fee_quartiles
+            GROUP BY quartile_number
+        ),
+        ship_fee_ratio_summary AS (
+            SELECT 'Ty le phi ship/gia hang (%)' AS chi_so,
+                   CASE quartile_number
+                       WHEN 1 THEN '1 - 25% ty le thap nhat'
+                       WHEN 2 THEN '2 - Tu 25%-50%'
+                       WHEN 3 THEN '3 - Tu 50%-75%'
+                       ELSE '4 - 25% ty le cao nhat'
+                   END AS nhom_phi,
+                   quartile_number AS nhom_quartile,
+                   COUNT(*) AS so_don,
+                   ROUND(AVG(metric_value), 2) AS gia_tri_trung_binh,
+                   ROUND(AVG(review_score), 2) AS diem_review_tb,
+                   ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
+            FROM ship_fee_ratio_quartiles
+            GROUP BY quartile_number
         )
-        SELECT 'Tong phi van chuyen' AS loai_chi_phi,
-               CASE group_number
-                   WHEN 1 THEN 'Nhom 1 - Thap nhat'
-                   WHEN 2 THEN 'Nhom 2 - Thap'
-                   WHEN 3 THEN 'Nhom 3 - Cao'
-                   ELSE 'Nhom 4 - Cao nhat'
-               END AS muc_phi,
-               group_number AS nhom_so,
-               COUNT(*) AS order_count,
-               ROUND(AVG(total_freight), 2) AS gia_tri_trung_binh,
-               ROUND(AVG(review_score), 2) AS review_trung_binh,
-               ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
-        FROM freight_quartiles
-        GROUP BY group_number
+        SELECT * FROM ship_fee_summary
         UNION ALL
-        SELECT 'Ty le phi ship / gia hang' AS loai_chi_phi,
-               CASE group_number
-                   WHEN 1 THEN 'Nhom 1 - Thap nhat'
-                   WHEN 2 THEN 'Nhom 2 - Thap'
-                   WHEN 3 THEN 'Nhom 3 - Cao'
-                   ELSE 'Nhom 4 - Cao nhat'
-               END AS muc_phi,
-               group_number AS nhom_so,
-               COUNT(*) AS order_count,
-               ROUND(AVG(freight_to_price_pct), 2) AS gia_tri_trung_binh,
-               ROUND(AVG(review_score), 2) AS review_trung_binh,
-               ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
-        FROM ratio_quartiles
-        GROUP BY group_number
-        ORDER BY loai_chi_phi, nhom_so;
+        SELECT * FROM ship_fee_ratio_summary
+        ORDER BY chi_so DESC, nhom_quartile;
         """,
     ),
     (

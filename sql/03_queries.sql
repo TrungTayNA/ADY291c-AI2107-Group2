@@ -2,7 +2,7 @@
 -- SQL ANALYSIS QUERIES
 -- Target DBMS : SQLite 3.x
 -- Dataset     : Olist Brazilian E-Commerce (2016-2018)
--- Questions   : Q01-Q10
+-- Questions   : Q1-Q8
 -- ============================================================
 
 PRAGMA foreign_keys = ON;
@@ -114,116 +114,7 @@ WHERE o.order_status = 'delivered'
 
 
 -- ============================================================
--- Q01: NGAY LE VA DIP DAC BIET CO LAM LUONG MUA TANG?
--- So sanh ngay dip dac biet voi ngay thuong cung nam.
--- ============================================================
-WITH special_dates(special_date, special_name) AS (
-    VALUES
-        ('2016-01-01','Tet Duong lich'), ('2016-04-21','Le Quoc khanh Brazil'),
-        ('2016-05-01','Quoc te Lao dong'), ('2016-09-07','Doc lap Brazil'),
-        ('2016-10-12','Nha thien chua Our Lady'), ('2016-11-02','Le hon sau'),
-        ('2016-11-15','Cong hoa Brazil'), ('2016-12-25','Giang sinh'),
-        ('2016-02-08','Carnival'), ('2016-02-09','Carnival'),
-        ('2016-03-25','Good Friday'), ('2016-05-26','Corpus Christi'),
-        ('2016-11-25','Black Friday'),
-        ('2017-01-01','Tet Duong lich'), ('2017-04-21','Le Quoc khanh Brazil'),
-        ('2017-05-01','Quoc te Lao dong'), ('2017-09-07','Doc lap Brazil'),
-        ('2017-10-12','Nha thien chua Our Lady'), ('2017-11-02','Le hon sau'),
-        ('2017-11-15','Cong hoa Brazil'), ('2017-12-25','Giang sinh'),
-        ('2017-02-27','Carnival'), ('2017-02-28','Carnival'),
-        ('2017-04-14','Good Friday'), ('2017-06-15','Corpus Christi'),
-        ('2017-11-24','Black Friday'),
-        ('2018-01-01','Tet Duong lich'), ('2018-04-21','Le Quoc khanh Brazil'),
-        ('2018-05-01','Quoc te Lao dong'), ('2018-09-07','Doc lap Brazil'),
-        ('2018-10-12','Nha thien chua Our Lady'), ('2018-11-02','Le hon sau'),
-        ('2018-11-15','Cong hoa Brazil'), ('2018-12-25','Giang sinh'),
-        ('2018-02-12','Carnival'), ('2018-02-13','Carnival'),
-        ('2018-03-30','Good Friday'), ('2018-05-31','Corpus Christi'),
-        ('2018-11-23','Black Friday')
-),
-daily_orders AS (
-    SELECT
-        date(order_purchase_timestamp) AS purchase_date,
-        COUNT(DISTINCT order_id) AS order_count
-    FROM orders
-    GROUP BY purchase_date
-)
-SELECT
-    d.purchase_date,
-    MIN(s.special_name) AS special_name,
-    d.order_count,
-    ROUND(100.0 * (d.order_count -
-        (SELECT AVG(order_count) FROM daily_orders d2
-         WHERE d2.purchase_date NOT IN (SELECT special_date FROM special_dates)
-           AND substr(d2.purchase_date,1,4) = substr(d.purchase_date,1,4)))
-        / NULLIF((SELECT AVG(order_count) FROM daily_orders d2
-                  WHERE d2.purchase_date NOT IN (SELECT special_date FROM special_dates)
-                    AND substr(d2.purchase_date,1,4) = substr(d.purchase_date,1,4)),0), 2) AS pct_vs_normal_days
-FROM daily_orders d
-LEFT JOIN special_dates s ON s.special_date = d.purchase_date
-WHERE s.special_date IS NOT NULL
-ORDER BY d.order_count DESC, d.purchase_date;
-
--- So sanh tong quat: ngay dac biet vs ngay thuong
-WITH special_dates(special_date) AS (
-    VALUES ('2016-01-01'), ('2016-04-21'), ('2016-05-01'), ('2016-09-07'),
-           ('2016-10-12'), ('2016-11-02'), ('2016-11-15'), ('2016-12-25'),
-           ('2016-02-08'), ('2016-02-09'), ('2016-03-25'), ('2016-05-26'), ('2016-11-25'),
-           ('2017-01-01'), ('2017-04-21'), ('2017-05-01'), ('2017-09-07'),
-           ('2017-10-12'), ('2017-11-02'), ('2017-11-15'), ('2017-12-25'),
-           ('2017-02-27'), ('2017-02-28'), ('2017-04-14'), ('2017-06-15'), ('2017-11-24'),
-           ('2018-01-01'), ('2018-04-21'), ('2018-05-01'), ('2018-09-07'),
-           ('2018-10-12'), ('2018-11-02'), ('2018-11-15'), ('2018-12-25'),
-           ('2018-02-12'), ('2018-02-13'), ('2018-03-30'), ('2018-05-31'), ('2018-11-23')
-),
-daily_orders AS (
-    SELECT date(order_purchase_timestamp) purchase_date, COUNT(DISTINCT order_id) order_count
-    FROM orders GROUP BY date(order_purchase_timestamp)
-)
-SELECT
-    CASE WHEN EXISTS (
-        SELECT 1 FROM special_dates s WHERE s.special_date = d.purchase_date
-    ) THEN 'Ngay dac biet' ELSE 'Ngay thuong' END AS day_type,
-    COUNT(*) AS day_count,
-    ROUND(AVG(d.order_count), 2) AS avg_orders_per_day,
-    MAX(d.order_count) AS max_orders_per_day
-FROM daily_orders d
-GROUP BY day_type
-ORDER BY avg_orders_per_day DESC;
-
-
--- ============================================================
--- Q02: PHAT HIEN NGAY DOT BIEN (SPIKE DETECTION)
--- So voi trung binh 28 ngay truoc, nguong canh bao >= 50% va >= 1.5 z-score.
--- ============================================================
-WITH daily_orders AS (
-    SELECT date(order_purchase_timestamp) AS purchase_date,
-           COUNT(DISTINCT order_id) AS order_count
-    FROM orders
-    GROUP BY date(order_purchase_timestamp)
-),
-baseline AS (
-    SELECT
-        purchase_date,
-        order_count,
-        AVG(order_count) OVER (
-            ORDER BY purchase_date ROWS BETWEEN 28 PRECEDING AND 1 PRECEDING
-        ) AS prior_28d_avg
-    FROM daily_orders
-)
-SELECT
-    purchase_date,
-    order_count,
-    ROUND(prior_28d_avg, 2) AS prior_28d_avg,
-    ROUND(100.0 * (order_count - prior_28d_avg) / NULLIF(prior_28d_avg, 0), 2) AS spike_pct
-FROM baseline
-WHERE prior_28d_avg IS NOT NULL
-  AND order_count >= 1.50 * prior_28d_avg
-ORDER BY spike_pct DESC, purchase_date;
-
-
--- ============================================================
--- Q03: PHAN BO REVIEW SCORE VA MAT CAN BANG LOP
+-- Q1: PHAN BO REVIEW SCORE VA MAT CAN BANG LOP
 -- ============================================================
 SELECT
     review_score,
@@ -249,7 +140,7 @@ ORDER BY MIN(review_score);
 
 
 -- ============================================================
--- Q04: DON GIAO TRE CO REVIEW THAP HON DON DUNG HAN?
+-- Q2: DON GIAO TRE CO REVIEW THAP HON DON DUNG HAN?
 -- ============================================================
 SELECT
     CASE WHEN is_late = 1 THEN 'Giao tre'
@@ -264,7 +155,7 @@ ORDER BY delivery_group;
 
 
 -- ============================================================
--- Q05: MUC DO TRE 0; 1-3; 4-7; >7 NGAY
+-- Q3: MUC DO TRE 0; 1-3; 4-7; >7 NGAY
 -- ============================================================
 SELECT
     CASE
@@ -287,55 +178,72 @@ ORDER BY MIN(CASE
 
 
 -- ============================================================
--- Q06: PHI VAN CHUYEN VA TY LE PHI/ GIA HANG CO ANH HUONG REVIEW?
+-- Q4: PHI VAN CHUYEN VA TY LE PHI/ GIA HANG CO ANH HUONG REVIEW?
 -- ============================================================
-WITH freight_quartiles AS (
-    SELECT total_freight, review_score,
-           NTILE(4) OVER (ORDER BY total_freight) AS freight_quartile
+WITH ship_fee_data AS (
+    -- Chi giu hai cot can thiet: phi ship va review.
+    SELECT total_freight AS metric_value, review_score
     FROM v_review_order_features
 ),
-ratio_quartiles AS (
-    SELECT freight_to_price_pct, review_score,
-           NTILE(4) OVER (ORDER BY freight_to_price_pct) AS ratio_quartile
+ship_fee_quartiles AS (
+    -- NTILE(4): chia don theo phi ship tang dan thanh 4 nhom gan bang nhau.
+    SELECT metric_value, review_score,
+           NTILE(4) OVER (ORDER BY metric_value) AS quartile_number
+    FROM ship_fee_data
+),
+ship_fee_ratio_data AS (
+    SELECT freight_to_price_pct AS metric_value, review_score
     FROM v_review_order_features
     WHERE freight_to_price_pct IS NOT NULL
+),
+ship_fee_ratio_quartiles AS (
+    -- NTILE(4): chia don theo ty le phi ship/gia hang tang dan.
+    SELECT metric_value, review_score,
+           NTILE(4) OVER (ORDER BY metric_value) AS quartile_number
+    FROM ship_fee_ratio_data
+),
+ship_fee_summary AS (
+    SELECT
+        'Tong phi ship (BRL)' AS chi_so,
+        CASE quartile_number
+            WHEN 1 THEN '1 - 25% phi thap nhat'
+            WHEN 2 THEN '2 - Tu 25%-50%'
+            WHEN 3 THEN '3 - Tu 50%-75%'
+            ELSE '4 - 25% phi cao nhat'
+        END AS nhom_phi,
+        quartile_number,
+        COUNT(*) AS order_count,
+        ROUND(AVG(metric_value), 2) AS gia_tri_trung_binh,
+        ROUND(AVG(review_score), 2) AS review_trung_binh,
+        ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
+    FROM ship_fee_quartiles
+    GROUP BY quartile_number
+),
+ship_fee_ratio_summary AS (
+    SELECT
+        'Ty le phi ship/gia hang (%)' AS chi_so,
+        CASE quartile_number
+            WHEN 1 THEN '1 - 25% ty le thap nhat'
+            WHEN 2 THEN '2 - Tu 25%-50%'
+            WHEN 3 THEN '3 - Tu 50%-75%'
+            ELSE '4 - 25% ty le cao nhat'
+        END AS nhom_phi,
+        quartile_number,
+        COUNT(*) AS order_count,
+        ROUND(AVG(metric_value), 2) AS gia_tri_trung_binh,
+        ROUND(AVG(review_score), 2) AS review_trung_binh,
+        ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
+    FROM ship_fee_ratio_quartiles
+    GROUP BY quartile_number
 )
-SELECT
-    'Tong phi van chuyen' AS loai_chi_phi,
-    CASE freight_quartile
-        WHEN 1 THEN 'Nhom 1 - Thap nhat'
-        WHEN 2 THEN 'Nhom 2 - Thap'
-        WHEN 3 THEN 'Nhom 3 - Cao'
-        ELSE 'Nhom 4 - Cao nhat'
-    END AS muc_phi,
-    freight_quartile AS nhom_so,
-    COUNT(*) AS order_count,
-    ROUND(AVG(total_freight), 2) AS gia_tri_trung_binh,
-    ROUND(AVG(review_score), 2) AS review_trung_binh,
-    ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
-FROM freight_quartiles
-GROUP BY freight_quartile
+SELECT * FROM ship_fee_summary
 UNION ALL
-SELECT
-    'Ty le phi ship / gia hang' AS loai_chi_phi,
-    CASE ratio_quartile
-        WHEN 1 THEN 'Nhom 1 - Thap nhat'
-        WHEN 2 THEN 'Nhom 2 - Thap'
-        WHEN 3 THEN 'Nhom 3 - Cao'
-        ELSE 'Nhom 4 - Cao nhat'
-    END AS muc_phi,
-    ratio_quartile AS nhom_so,
-    COUNT(*) AS order_count,
-    ROUND(AVG(freight_to_price_pct), 2) AS gia_tri_trung_binh,
-    ROUND(AVG(review_score), 2) AS review_trung_binh,
-    ROUND(100.0 * AVG(CASE WHEN review_score <= 2 THEN 1 ELSE 0 END), 2) AS ty_le_review_1_2_pct
-FROM ratio_quartiles
-GROUP BY ratio_quartile
-ORDER BY loai_chi_phi, nhom_so;
+SELECT * FROM ship_fee_ratio_summary
+ORDER BY chi_so DESC, quartile_number;
 
 
 -- ============================================================
--- Q07: DO PHUC TAP DON HANG - SO SAN PHAM VA SO NGUOI BAN
+-- Q5: DO PHUC TAP DON HANG - SO SAN PHAM VA SO NGUOI BAN
 -- ============================================================
 SELECT
     CASE
@@ -356,7 +264,7 @@ ORDER BY MIN(item_count), MIN(seller_count);
 
 
 -- ============================================================
--- Q08: PHUONG THUC THANH TOAN VA SO KY TRA GOP
+-- Q6: PHUONG THUC THANH TOAN VA SO KY TRA GOP
 -- ============================================================
 SELECT
     first_payment_type AS payment_type,
@@ -386,7 +294,7 @@ ORDER BY MIN(max_installments);
 
 
 -- ============================================================
--- Q09: XU HUONG REVIEW SCORE THEO THANG (22 THANG DU LIEU)
+-- Q7: XU HUONG REVIEW SCORE THEO THANG (22 THANG DU LIEU)
 -- ============================================================
 SELECT
     purchase_year_month,
@@ -400,7 +308,7 @@ ORDER BY purchase_year_month;
 
 
 -- ============================================================
--- Q10: MUC DO HAI LONG THEO BANG/KHU VUC
+-- Q8: MUC DO HAI LONG THEO BANG/KHU VUC
 -- Chi bao gom bang co toi thieu 100 don.
 -- ============================================================
 SELECT
